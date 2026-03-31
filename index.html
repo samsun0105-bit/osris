@@ -57,8 +57,20 @@
         ins { background: #e6ffed; text-decoration: none; border-bottom: 2px solid #059669; font-weight: 500; color: #065f46; padding: 0 2px; }
         del { background: #ffeef0; color: #991b1b; text-decoration: line-through; padding: 0 2px; }
 
+        .admin-input {
+            background: transparent;
+            border-bottom: 1px dashed #cbd5e1;
+            outline: none;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        .admin-input:focus {
+            border-bottom: 1px solid #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+
         @media print {
-            header, footer, .back-nav-btn, .action-buttons, .sidebar-mock, .time-display-box {
+            header, footer, .back-nav-btn, .action-buttons, .sidebar-mock, .time-display-box, .admin-controls, .row-action-btn, .db-controls {
                 display: none !important;
             }
             body { background-color: white !important; }
@@ -77,49 +89,14 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useMemo, useEffect } = React;
-
-        const LAW_DIFF_DATABASE = {
-            1: { 
-                rows: [
-                    { no: '第 4 條', old: '本法適用於各業。但因事業規模、性質及風險程度...', new: '本法適用於各業。但因事業規模、性質及風險程度，經中央主管機關指定公告者，<ins>得分階段適用</ins>。', note: '擴大適用範圍' },
-                    { no: '第 45 條', old: '有下列情事之一者，處新臺幣三萬元以上十五萬元以下罰鍰...', new: '有下列情事之一者，處新臺幣三萬元以上<ins>三十萬元</ins>以下罰鍰...', note: '罰則加重' }
-                ]
-            },
-            4: { 
-                rows: [
-                    { no: '第 21 條', old: '雇主對於勞工從事作業，應採取必要之安全設備及措施。', new: '雇主對於勞工從事作業，應採取必要之安全設備及措施，<ins>並應落實自動檢查計畫</ins>。', note: '加強自主管理' },
-                    { no: '第 128-1 條', old: '(新增條文)', new: '<ins>雇主對於高溫環境作業勞工，應提供必要之散熱設備及足夠之飲用水。</ins>', note: '新增熱危害預防' }
-                ]
-            },
-            8: { 
-                rows: [
-                    { no: '附表一', old: '甲苯容許濃度：100 ppm', new: '甲苯容許濃度：<ins>50 ppm</ins>', note: '標準趨嚴' },
-                    { no: '附表一', old: '二甲苯容許濃度：100 ppm', new: '二甲苯容許濃度：<ins>80 ppm</ins>', note: '標準趨嚴' }
-                ]
-            },
-            24: { 
-                rows: [
-                    { no: '第 32-1 條', old: '雇主依第三十二條第一項及第二項規定使勞工延長工作時間...', new: '雇主依第三十二條第一項及第二項規定使勞工延長工作時間，<ins>應核實記載至分鐘為止</ins>。', note: '工時記載精細化' }
-                ]
-            }
-        };
-
-        const getMockDiff = (law) => {
-            if (LAW_DIFF_DATABASE[law.id]) return LAW_DIFF_DATABASE[law.id];
-            return {
-                rows: [
-                    { 
-                        no: `第 ${Math.floor(Math.random() * 100) + 1} 條`, 
-                        old: `雇主對於${law.name}所定之安全衛生事項，應依現行規定執行。`, 
-                        new: `雇主對於${law.name}所定之安全衛生事項，應依現行規定執行，<ins>並應保留相關執行紀錄備查</ins>。`, 
-                        note: '程序強化' 
-                    }
-                ]
-            };
-        };
+        const { useState, useMemo, useEffect, useRef } = React;
 
         const App = () => {
+            const UNIFIED_INITIAL_DATE = '2026-03-02';
+            const ADMIN_PASSWORD = "0000";
+            const fileInputRef = useRef(null);
+
+            // State 管理
             const [activeTab, setActiveTab] = useState('monitor');
             const [isSyncing, setIsSyncing] = useState(false);
             const [syncText, setSyncText] = useState('正在執行鑑別程序...');
@@ -127,14 +104,14 @@
             const [searchQuery, setSearchQuery] = useState('');
             const [filterType, setFilterType] = useState('全部');
             const [currentTime, setCurrentTime] = useState(new Date());
+            
+            // 管理員狀態
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [showLoginModal, setShowLoginModal] = useState(false);
+            const [passwordInput, setPasswordInput] = useState('');
+            const [loginError, setLoginError] = useState(false);
 
-            const getTodayStr = () => {
-                const now = new Date();
-                return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            };
-
-            const UNIFIED_INITIAL_DATE = '2026-03-02';
-
+            // 法規主數據
             const [laws, setLaws] = useState(() => {
                 const savedLaws = localStorage.getItem('osh_laws_data');
                 if (savedLaws) return JSON.parse(savedLaws);
@@ -171,15 +148,32 @@
                 ];
             });
 
+            // 詳細條文資料庫 (可編輯)
+            const [lawDetails, setLawDetails] = useState(() => {
+                const savedDetails = localStorage.getItem('osh_law_details_data');
+                if (savedDetails) return JSON.parse(savedDetails);
+                
+                // 初始 Mock 資料
+                const initialDetails = {
+                    1: { rows: [{ no: '第 4 條', old: '本法適用於各業。但因事業規模、性質及風險程度...', new: '本法適用於各業。但因事業規模、性質及風險程度，經中央主管機關指定公告者，<ins>得分階段適用</ins>。', note: '擴大適用範圍' }, { no: '第 45 條', old: '有下列情事之一者，處新臺幣三萬元以上十五萬元以下罰鍰...', new: '有下列情事之一者，處新臺幣三萬元以上<ins>三十萬元</ins>以下罰鍰...', note: '罰則加重' }] },
+                    4: { rows: [{ no: '第 21 條', old: '雇主對於勞工從事作業，應採取必要之安全設備及措施。', new: '雇主對於勞工從事作業，應採取必要之安全設備及措施，<ins>並應落實自動檢查計畫</ins>。', note: '加強自主管理' }, { no: '第 128-1 條', old: '(新增條文)', new: '<ins>雇主對於高溫環境作業勞工，應提供必要之散熱設備及足夠之飲用水。</ins>', note: '新增熱危害預防' }] },
+                    8: { rows: [{ no: '附表一', old: '甲苯容許濃度：100 ppm', new: '甲苯容許濃度：<ins>50 ppm</ins>', note: '標準趨嚴' }, { no: '附表一', old: '二甲苯容許濃度：100 ppm', new: '二甲苯容許濃度：<ins>80 ppm</ins>', note: '標準趨嚴' }] },
+                    24: { rows: [{ no: '第 32-1 條', old: '雇主依第三十二條第一項及第二項規定使勞工延長工作時間...', new: '雇主依第三十二條第一項及第二項規定使勞工延長工作時間，<ins>應核實記載至分鐘為止</ins>。', note: '工時記載精細化' }] }
+                };
+                return initialDetails;
+            });
+
             useEffect(() => {
                 localStorage.setItem('osh_laws_data', JSON.stringify(laws));
-            }, [laws]);
+                localStorage.setItem('osh_law_details_data', JSON.stringify(lawDetails));
+            }, [laws, lawDetails]);
 
             useEffect(() => {
                 const timer = setInterval(() => setCurrentTime(new Date()), 1000);
                 return () => clearInterval(timer);
             }, []);
 
+            // 輔助函式
             const formatTime = (date) => {
                 const y = date.getFullYear();
                 const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -194,17 +188,115 @@
                 const rDate = new Date(remoteDate);
                 const lDate = localDate ? new Date(localDate) : new Date(0);
                 const today = new Date();
-                
                 if (rDate > lDate) return { code: 'danger', color: 'bg-rose-500', text: '需重新鑑別' };
                 if ((today - lDate) / (1000 * 60 * 60 * 24) > 365) return { code: 'warning', color: 'bg-amber-500', text: '例行性檢視' };
                 return { code: 'success', color: 'bg-emerald-600', text: '鑑別完成' };
             };
 
+            // 數據庫導入/導出
+            const exportDatabase = () => {
+                const dataStr = JSON.stringify({ laws, lawDetails }, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const exportFileDefaultName = `OSH_Regulation_DB_${new Date().toISOString().split('T')[0]}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            };
+
+            const importDatabase = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        if (importedData.laws && importedData.lawDetails) {
+                            if (confirm('導入數據庫將覆蓋目前所有紀錄，確定要繼續嗎？')) {
+                                setLaws(importedData.laws);
+                                setLawDetails(importedData.lawDetails);
+                                alert('數據庫導入成功！');
+                            }
+                        } else {
+                            alert('無效的數據庫檔案格式。');
+                        }
+                    } catch (err) {
+                        alert('檔案解析失敗：' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+                // 清空 input 讓同一個檔案可以重複觸發
+                event.target.value = '';
+            };
+
+            // 管理員行為
+            const handleLogin = () => {
+                if (passwordInput === ADMIN_PASSWORD) {
+                    setIsAdmin(true);
+                    setShowLoginModal(false);
+                    setPasswordInput('');
+                    setLoginError(false);
+                } else {
+                    setLoginError(true);
+                }
+            };
+
+            const handleLogout = () => {
+                setIsAdmin(false);
+                setActiveTab('monitor');
+            };
+
+            const addNewLaw = () => {
+                const newId = Math.max(...laws.map(l => l.id), 0) + 1;
+                setLaws([...laws, { id: newId, name: '新法規名稱', type: '法規命令', remoteDate: '2026-03-01', localCheckDate: '2026-03-01' }]);
+            };
+
+            const removeLaw = (id) => {
+                if(confirm('確定要移除此法規監測項目嗎？相關鑑別紀錄也會消失。')) {
+                    setLaws(prev => prev.filter(law => law.id !== id));
+                }
+            };
+
+            const updateLawField = (id, field, value) => {
+                setLaws(prev => prev.map(law => law.id === id ? { ...law, [field]: value } : law));
+            };
+
+            // 比對詳情編輯
+            const updateDetailField = (lawId, rowIndex, field, value) => {
+                setLawDetails(prev => {
+                    const current = prev[lawId] || { rows: [] };
+                    const newRows = [...current.rows];
+                    if (!newRows[rowIndex]) {
+                        newRows[rowIndex] = { no: '', old: '', new: '', note: '' };
+                    }
+                    newRows[rowIndex] = { ...newRows[rowIndex], [field]: value };
+                    return { ...prev, [lawId]: { rows: newRows } };
+                });
+            };
+
+            const removeDetailRow = (lawId, rowIndex) => {
+                setLawDetails(prev => {
+                    const current = prev[lawId] || { rows: [] };
+                    const newRows = current.rows.filter((_, idx) => idx !== rowIndex);
+                    return { ...prev, [lawId]: { rows: newRows } };
+                });
+            };
+
+            const addDetailRow = (lawId) => {
+                setLawDetails(prev => {
+                    const current = prev[lawId] || { rows: [] };
+                    return { ...prev, [lawId]: { rows: [...current.rows, { no: '新條號', old: '舊條文內容', new: '新條文內容', note: '異動類型' }] } };
+                });
+            };
+
+            // 同步行為
             const handleAllSync = () => {
                 setSyncText('正在批次執行全法規鑑別同步，請稍候...');
                 setIsSyncing(true);
                 setTimeout(() => {
-                    const today = getTodayStr();
+                    const today = new Date().toISOString().split('T')[0];
                     setLaws(prev => prev.map(law => ({ ...law, localCheckDate: today })));
                     setIsSyncing(false);
                 }, 5000); 
@@ -214,7 +306,7 @@
                 setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
                 setIsSyncing(true);
                 setTimeout(() => {
-                    const today = getTodayStr();
+                    const today = new Date().toISOString().split('T')[0];
                     setLaws(prev => prev.map(law => law.id === lawId ? { ...law, localCheckDate: today } : law));
                     setIsSyncing(false);
                 }, 2500);
@@ -257,11 +349,50 @@
 
             const currentLawData = useMemo(() => {
                 if (!selectedLaw) return null;
-                return getMockDiff(selectedLaw);
-            }, [selectedLaw]);
+                return lawDetails[selectedLaw.id] || { rows: [] };
+            }, [selectedLaw, lawDetails]);
 
             return (
                 <div className="min-h-screen flex flex-col">
+                    {/* Login Modal */}
+                    {showLoginModal && (
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+                            <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-200 fade-in">
+                                <div className="text-center mb-8">
+                                    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mx-auto mb-4">
+                                        <i className="fas fa-user-shield text-3xl"></i>
+                                    </div>
+                                    <h3 className="text-2xl font-black text-slate-800">管理員身份驗證</h3>
+                                    <p className="text-slate-500 text-sm mt-2">請輸入存取密碼以啟動編輯模式</p>
+                                </div>
+                                <div className="space-y-4">
+                                    <input 
+                                        type="password" 
+                                        className={`w-full px-6 py-4 bg-slate-50 border ${loginError ? 'border-rose-400' : 'border-slate-200'} rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-center text-xl tracking-[0.5em]`}
+                                        placeholder="••••"
+                                        value={passwordInput}
+                                        onChange={(e) => setPasswordInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                                        autoFocus
+                                    />
+                                    {loginError && <p className="text-rose-500 text-xs font-bold text-center">密碼錯誤，請重新輸入</p>}
+                                    <button 
+                                        onClick={handleLogin}
+                                        className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all"
+                                    >
+                                        啟動編輯模式
+                                    </button>
+                                    <button 
+                                        onClick={() => setShowLoginModal(false)}
+                                        className="w-full py-4 text-slate-400 font-bold hover:text-slate-600 transition-all"
+                                    >
+                                        取消
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <header className="bg-slate-900 border-b border-slate-800 px-10 py-6 flex justify-between items-center sticky top-0 z-40 shadow-xl">
                         <div className="flex items-center gap-6">
                             <div className="bg-blue-600 w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
@@ -292,23 +423,21 @@
                             </div>
                             
                             <div className="flex items-center gap-4">
+                                {isAdmin ? (
+                                    <button onClick={handleLogout} className="flex items-center gap-3 px-6 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
+                                        <i className="fas fa-sign-out-alt"></i> 儲存並登出
+                                    </button>
+                                ) : (
+                                    <button onClick={() => setShowLoginModal(true)} className="flex items-center gap-3 px-6 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
+                                        <i className="fas fa-lock"></i> 管理員登入
+                                    </button>
+                                )}
                                 <button onClick={handleAllSync} className="hidden lg:flex items-center gap-3 px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-black hover:bg-indigo-700 transition-all shadow-lg active:scale-95 border-b-4 border-indigo-900">
                                     <i className="fas fa-bolt"></i> 一鍵同步
                                 </button>
                                 <button onClick={handleExport} className="hidden lg:flex items-center gap-3 px-6 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-800 transition-all shadow-lg active:scale-95 border-b-4 border-slate-950">
                                     <i className="fas fa-file-export"></i> 匯出總表
                                 </button>
-                                <div className="hidden md:flex bg-slate-800 p-1 rounded-xl border border-slate-700">
-                                    {['全部', '法律', '法規命令', '行政規則'].map(type => (
-                                        <button
-                                            key={type}
-                                            onClick={() => setFilterType(type)}
-                                            className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${filterType === type ? 'bg-slate-700 text-blue-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
-                                        >
-                                            {type}
-                                        </button>
-                                    ))}
-                                </div>
                             </div>
                         </div>
                     </header>
@@ -335,15 +464,53 @@
                                             <h2 className="text-3xl font-black text-slate-800 tracking-tight">法規動態監測</h2>
                                             <p className="text-slate-500 text-base font-medium mt-1">系統正在即時比對全國法規資料庫之最新修訂內容</p>
                                         </div>
-                                        <div className="relative">
-                                            <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                                            <input 
-                                                type="text" 
-                                                placeholder="快速搜尋法規名稱..." 
-                                                className="pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl text-base w-full md:w-80 focus:ring-4 focus:ring-blue-500/10 outline-none shadow-sm transition-all"
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                            />
+                                        <div className="flex flex-col gap-4 items-end">
+                                            {/* 數據庫導入導出功能 - 對調位置 */}
+                                            <div className="flex items-center gap-3 db-controls">
+                                                <input 
+                                                    type="file" 
+                                                    accept=".json" 
+                                                    onChange={importDatabase} 
+                                                    className="hidden" 
+                                                    ref={fileInputRef} 
+                                                />
+                                                <button 
+                                                    onClick={exportDatabase}
+                                                    className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-2"
+                                                >
+                                                    <i className="fas fa-share-nodes"></i> 導出數據庫
+                                                </button>
+                                                <button 
+                                                    onClick={() => fileInputRef.current.click()}
+                                                    className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-2"
+                                                >
+                                                    <i className="fas fa-file-import"></i> 導入數據庫
+                                                </button>
+                                            </div>
+
+                                            <div className="flex items-center gap-4">
+                                                <div className="hidden md:flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                                                    {['全部', '法律', '法規命令', '行政規則'].map(type => (
+                                                        <button
+                                                            key={type}
+                                                            onClick={() => setFilterType(type)}
+                                                            className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${filterType === type ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+                                                        >
+                                                            {type}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className="relative">
+                                                    <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="快速搜尋法規名稱..." 
+                                                        className="pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl text-base w-full md:w-80 focus:ring-4 focus:ring-blue-500/10 outline-none shadow-sm transition-all"
+                                                        value={searchQuery}
+                                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -351,7 +518,7 @@
                                         {filteredLaws.map((law, index) => {
                                             const status = getLawStatus(law.remoteDate, law.localCheckDate);
                                             return (
-                                                <div key={law.id} className="p-6 rounded-3xl transition-all flex flex-col lg:flex-row lg:items-center justify-between law-card-glow gap-8">
+                                                <div key={law.id} className="p-6 rounded-3xl transition-all flex flex-col lg:flex-row lg:items-center justify-between law-card-glow gap-8 relative group">
                                                     <div className="flex gap-6 items-center flex-1">
                                                         <div className="relative shrink-0">
                                                             <div className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center shadow-lg bg-orange-400 text-white">
@@ -361,7 +528,24 @@
 
                                                         <div className="flex flex-col min-w-0 flex-1">
                                                             <div className="flex items-center gap-3 flex-wrap mb-2.5">
-                                                                <h3 className="font-black text-slate-800 truncate text-xl">{law.name}</h3>
+                                                                {isAdmin ? (
+                                                                    <div className="flex-1 flex items-center gap-2">
+                                                                        <input 
+                                                                            className="font-black text-slate-800 truncate text-xl admin-input"
+                                                                            value={law.name}
+                                                                            onChange={(e) => updateLawField(law.id, 'name', e.target.value)}
+                                                                        />
+                                                                        <button 
+                                                                            onClick={() => removeLaw(law.id)}
+                                                                            className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center text-xs"
+                                                                            title="移除此法規"
+                                                                        >
+                                                                            <i className="fas fa-trash-alt"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <h3 className="font-black text-slate-800 truncate text-xl">{law.name}</h3>
+                                                                )}
                                                                 <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-lg border border-slate-200 uppercase">{law.type}</span>
                                                                 {status.code === 'danger' && <span className="new-badge text-[10px] font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-lg border border-rose-200">法規已異動</span>}
                                                             </div>
@@ -369,7 +553,16 @@
                                                             <div className="flex flex-wrap items-center gap-y-3">
                                                                 <div className="flex flex-col min-w-[140px]">
                                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">全國法規公佈日</span>
-                                                                    <span className="text-sm font-bold text-slate-700">{law.remoteDate}</span>
+                                                                    {isAdmin ? (
+                                                                        <input 
+                                                                            type="date"
+                                                                            className="text-sm font-bold text-slate-700 admin-input"
+                                                                            value={law.remoteDate}
+                                                                            onChange={(e) => updateLawField(law.id, 'remoteDate', e.target.value)}
+                                                                        />
+                                                                    ) : (
+                                                                        <span className="text-sm font-bold text-slate-700">{law.remoteDate}</span>
+                                                                    )}
                                                                 </div>
                                                                 <div className="w-px h-8 bg-slate-200 mx-6 hidden sm:block"></div>
                                                                 <div className="flex flex-col min-w-[140px]">
@@ -399,6 +592,15 @@
                                                 </div>
                                             );
                                         })}
+                                        {isAdmin && (
+                                            <button 
+                                                onClick={addNewLaw}
+                                                className="w-full py-8 border-2 border-dashed border-slate-300 rounded-3xl text-slate-400 font-black flex flex-col items-center justify-center gap-3 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all"
+                                            >
+                                                <i className="fas fa-plus-circle text-2xl"></i>
+                                                新增法規監測項目
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
@@ -418,7 +620,16 @@
                                                     <div className="flex gap-6">
                                                         <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
                                                             <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1">最新公佈日</span>
-                                                            <span className="text-sm font-black text-slate-700">{selectedLaw?.remoteDate}</span>
+                                                            {isAdmin ? (
+                                                                <input 
+                                                                    type="date"
+                                                                    className="text-sm font-black text-slate-700 admin-input"
+                                                                    value={selectedLaw?.remoteDate}
+                                                                    onChange={(e) => updateLawField(selectedLaw.id, 'remoteDate', e.target.value)}
+                                                                />
+                                                            ) : (
+                                                                <span className="text-sm font-black text-slate-700">{selectedLaw?.remoteDate}</span>
+                                                            )}
                                                         </div>
                                                         <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
                                                             <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1">最近鑑別/登錄日</span>
@@ -458,7 +669,7 @@
                                                 <table className="w-full text-left border-collapse">
                                                     <thead>
                                                         <tr className="bg-slate-50 border-b border-slate-200">
-                                                            <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-24">項次</th>
+                                                            <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-24 text-center">操作</th>
                                                             <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-32">條號</th>
                                                             <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">條文比對 (舊版 vs 新版)</th>
                                                             <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-40">異動屬性</th>
@@ -467,19 +678,68 @@
                                                     <tbody className="divide-y divide-slate-100">
                                                         {currentLawData?.rows.map((row, idx) => (
                                                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                                                <td className="px-8 py-6 font-bold text-slate-400">{idx + 1}</td>
-                                                                <td className="px-8 py-6 font-black text-blue-600">{row.no}</td>
+                                                                <td className="px-8 py-6 text-center">
+                                                                    {isAdmin ? (
+                                                                        <button 
+                                                                            onClick={() => removeDetailRow(selectedLaw.id, idx)}
+                                                                            className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center row-action-btn"
+                                                                            title="移除此條文"
+                                                                        >
+                                                                            <i className="fas fa-trash-alt"></i>
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="font-bold text-slate-400">{idx + 1}</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-8 py-6 font-black text-blue-600">
+                                                                    {isAdmin ? (
+                                                                        <input className="admin-input" value={row.no} onChange={(e) => updateDetailField(selectedLaw.id, idx, 'no', e.target.value)} />
+                                                                    ) : row.no}
+                                                                </td>
                                                                 <td className="px-8 py-6">
                                                                     <div className="space-y-4">
-                                                                        <div className="text-slate-400 text-sm bg-slate-50 p-3 rounded-lg border-l-4 border-slate-200 line-through">{row.old}</div>
-                                                                        <div className="text-slate-800 text-base font-medium p-3 rounded-lg border-l-4 border-blue-500 bg-blue-50/30" dangerouslySetInnerHTML={{ __html: row.new }}></div>
+                                                                        {isAdmin ? (
+                                                                            <div className="space-y-2">
+                                                                                <textarea 
+                                                                                    className="w-full text-slate-400 text-sm bg-slate-50 p-3 rounded-lg border-l-4 border-slate-200 line-through outline-none" 
+                                                                                    value={row.old}
+                                                                                    onChange={(e) => updateDetailField(selectedLaw.id, idx, 'old', e.target.value)}
+                                                                                />
+                                                                                <textarea 
+                                                                                    className="w-full text-slate-800 text-base font-medium p-3 rounded-lg border-l-4 border-blue-500 bg-blue-50/30 outline-none" 
+                                                                                    value={row.new}
+                                                                                    onChange={(e) => updateDetailField(selectedLaw.id, idx, 'new', e.target.value)}
+                                                                                />
+                                                                            </div>
+                                                                        ) : (
+                                                                            <>
+                                                                                <div className="text-slate-400 text-sm bg-slate-50 p-3 rounded-lg border-l-4 border-slate-200 line-through">{row.old}</div>
+                                                                                <div className="text-slate-800 text-base font-medium p-3 rounded-lg border-l-4 border-blue-500 bg-blue-50/30" dangerouslySetInnerHTML={{ __html: row.new }}></div>
+                                                                            </>
+                                                                        )}
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-8 py-6">
-                                                                    <span className="px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-xs font-black">{row.note}</span>
+                                                                    {isAdmin ? (
+                                                                        <input className="admin-input text-amber-700 font-black" value={row.note} onChange={(e) => updateDetailField(selectedLaw.id, idx, 'note', e.target.value)} />
+                                                                    ) : (
+                                                                        <span className="px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-xs font-black">{row.note}</span>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         ))}
+                                                        {isAdmin && (
+                                                            <tr>
+                                                                <td colSpan="4" className="p-6">
+                                                                    <button 
+                                                                        onClick={() => addDetailRow(selectedLaw.id)}
+                                                                        className="w-full py-4 border border-dashed border-slate-300 rounded-xl text-slate-400 font-bold hover:bg-slate-50 transition-all"
+                                                                    >
+                                                                        <i className="fas fa-plus mr-2"></i> 新增異動對照條文
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        )}
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -516,4 +776,4 @@
         root.render(<App />);
     </script>
 </body>
-</html> 
+</html>
