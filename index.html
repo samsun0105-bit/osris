@@ -93,7 +93,6 @@
 
         const App = () => {
             const UNIFIED_INITIAL_DATE = '2026-03-02';
-            const ADMIN_PASSWORD = "0000";
             const fileInputRef = useRef(null);
 
             // State 管理
@@ -108,8 +107,17 @@
             // 管理員狀態
             const [isAdmin, setIsAdmin] = useState(false);
             const [showLoginModal, setShowLoginModal] = useState(false);
+            const [authMode, setAuthMode] = useState('login'); // 'login' or 'changePassword'
             const [passwordInput, setPasswordInput] = useState('');
+            const [oldPasswordInput, setOldPasswordInput] = useState('');
+            const [newPasswordInput, setNewPasswordInput] = useState('');
             const [loginError, setLoginError] = useState(false);
+            const [changeError, setChangeError] = useState('');
+
+            // 密碼管理
+            const [adminPassword, setAdminPassword] = useState(() => {
+                return localStorage.getItem('osh_admin_pwd') || '0000';
+            });
 
             // 法規主數據
             const [laws, setLaws] = useState(() => {
@@ -153,7 +161,6 @@
                 const savedDetails = localStorage.getItem('osh_law_details_data');
                 if (savedDetails) return JSON.parse(savedDetails);
                 
-                // 初始 Mock 資料
                 const initialDetails = {
                     1: { rows: [{ no: '第 4 條', old: '本法適用於各業。但因事業規模、性質及風險程度...', new: '本法適用於各業。但因事業規模、性質及風險程度，經中央主管機關指定公告者，<ins>得分階段適用</ins>。', note: '擴大適用範圍' }, { no: '第 45 條', old: '有下列情事之一者，處新臺幣三萬元以上十五萬元以下罰鍰...', new: '有下列情事之一者，處新臺幣三萬元以上<ins>三十萬元</ins>以下罰鍰...', note: '罰則加重' }] },
                     4: { rows: [{ no: '第 21 條', old: '雇主對於勞工從事作業，應採取必要之安全設備及措施。', new: '雇主對於勞工從事作業，應採取必要之安全設備及措施，<ins>並應落實自動檢查計畫</ins>。', note: '加強自主管理' }, { no: '第 128-1 條', old: '(新增條文)', new: '<ins>雇主對於高溫環境作業勞工，應提供必要之散熱設備及足夠之飲用水。</ins>', note: '新增熱危害預防' }] },
@@ -166,7 +173,8 @@
             useEffect(() => {
                 localStorage.setItem('osh_laws_data', JSON.stringify(laws));
                 localStorage.setItem('osh_law_details_data', JSON.stringify(lawDetails));
-            }, [laws, lawDetails]);
+                localStorage.setItem('osh_admin_pwd', adminPassword);
+            }, [laws, lawDetails, adminPassword]);
 
             useEffect(() => {
                 const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -227,13 +235,12 @@
                     }
                 };
                 reader.readAsText(file);
-                // 清空 input 讓同一個檔案可以重複觸發
                 event.target.value = '';
             };
 
             // 管理員行為
             const handleLogin = () => {
-                if (passwordInput === ADMIN_PASSWORD) {
+                if (passwordInput === adminPassword) {
                     setIsAdmin(true);
                     setShowLoginModal(false);
                     setPasswordInput('');
@@ -241,6 +248,23 @@
                 } else {
                     setLoginError(true);
                 }
+            };
+
+            const handleChangePassword = () => {
+                if (oldPasswordInput !== adminPassword) {
+                    setChangeError('舊密碼不正確');
+                    return;
+                }
+                if (newPasswordInput.length < 4) {
+                    setChangeError('新密碼長度至少需 4 碼');
+                    return;
+                }
+                setAdminPassword(newPasswordInput);
+                setAuthMode('login');
+                setOldPasswordInput('');
+                setNewPasswordInput('');
+                setChangeError('');
+                alert('密碼修改成功，請重新登入。');
             };
 
             const handleLogout = () => {
@@ -354,41 +378,101 @@
 
             return (
                 <div className="min-h-screen flex flex-col">
-                    {/* Login Modal */}
+                    {/* Login & Change Password Modal */}
                     {showLoginModal && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
                             <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-200 fade-in">
-                                <div className="text-center mb-8">
-                                    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mx-auto mb-4">
-                                        <i className="fas fa-user-shield text-3xl"></i>
-                                    </div>
-                                    <h3 className="text-2xl font-black text-slate-800">管理員身份驗證</h3>
-                                    <p className="text-slate-500 text-sm mt-2">請輸入存取密碼以啟動編輯模式</p>
-                                </div>
-                                <div className="space-y-4">
-                                    <input 
-                                        type="password" 
-                                        className={`w-full px-6 py-4 bg-slate-50 border ${loginError ? 'border-rose-400' : 'border-slate-200'} rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-center text-xl tracking-[0.5em]`}
-                                        placeholder="••••"
-                                        value={passwordInput}
-                                        onChange={(e) => setPasswordInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                                        autoFocus
-                                    />
-                                    {loginError && <p className="text-rose-500 text-xs font-bold text-center">密碼錯誤，請重新輸入</p>}
-                                    <button 
-                                        onClick={handleLogin}
-                                        className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all"
-                                    >
-                                        啟動編輯模式
-                                    </button>
-                                    <button 
-                                        onClick={() => setShowLoginModal(false)}
-                                        className="w-full py-4 text-slate-400 font-bold hover:text-slate-600 transition-all"
-                                    >
-                                        取消
-                                    </button>
-                                </div>
+                                {authMode === 'login' ? (
+                                    <>
+                                        <div className="text-center mb-8">
+                                            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mx-auto mb-4">
+                                                <i className="fas fa-user-shield text-3xl"></i>
+                                            </div>
+                                            <h3 className="text-2xl font-black text-slate-800">管理員身份驗證</h3>
+                                            <p className="text-slate-500 text-sm mt-2">請輸入存取密碼以啟動編輯模式</p>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <input 
+                                                type="password" 
+                                                className={`w-full px-6 py-4 bg-slate-50 border ${loginError ? 'border-rose-400' : 'border-slate-200'} rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-center text-xl tracking-[0.5em]`}
+                                                placeholder="••••"
+                                                value={passwordInput}
+                                                onChange={(e) => setPasswordInput(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                                                autoFocus
+                                            />
+                                            {loginError && <p className="text-rose-500 text-xs font-bold text-center">密碼錯誤，請重新輸入</p>}
+                                            <button 
+                                                onClick={handleLogin}
+                                                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all"
+                                            >
+                                                啟動編輯模式
+                                            </button>
+                                            <div className="flex justify-between px-2">
+                                                <button 
+                                                    onClick={() => setAuthMode('changePassword')}
+                                                    className="text-xs text-blue-600 font-bold hover:underline"
+                                                >
+                                                    修改登入密碼
+                                                </button>
+                                                <button 
+                                                    onClick={() => setShowLoginModal(false)}
+                                                    className="text-xs text-slate-400 font-bold hover:text-slate-600 transition-all"
+                                                >
+                                                    取消
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-center mb-8">
+                                            <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mx-auto mb-4">
+                                                <i className="fas fa-key text-3xl"></i>
+                                            </div>
+                                            <h3 className="text-2xl font-black text-slate-800">修改管理密碼</h3>
+                                            <p className="text-slate-500 text-sm mt-2">請驗證身分並設定新密碼</p>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">目前的舊密碼</label>
+                                                <input 
+                                                    type="password" 
+                                                    className="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20 text-center tracking-[0.3em]"
+                                                    placeholder="OLD PASSWORD"
+                                                    value={oldPasswordInput}
+                                                    onChange={(e) => setOldPasswordInput(e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">設定新密碼</label>
+                                                <input 
+                                                    type="password" 
+                                                    className="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20 text-center tracking-[0.3em]"
+                                                    placeholder="NEW PASSWORD"
+                                                    value={newPasswordInput}
+                                                    onChange={(e) => setNewPasswordInput(e.target.value)}
+                                                />
+                                            </div>
+                                            {changeError && <p className="text-rose-500 text-xs font-bold text-center">{changeError}</p>}
+                                            <button 
+                                                onClick={handleChangePassword}
+                                                className="w-full py-4 bg-amber-500 text-white rounded-2xl font-black shadow-xl shadow-amber-600/20 hover:bg-amber-600 active:scale-[0.98] transition-all"
+                                            >
+                                                儲存變更密碼
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    setAuthMode('login');
+                                                    setChangeError('');
+                                                }}
+                                                className="w-full py-2 text-slate-400 font-bold hover:text-slate-600 transition-all text-sm"
+                                            >
+                                                返回登入
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     )}
@@ -428,7 +512,7 @@
                                         <i className="fas fa-sign-out-alt"></i> 儲存並登出
                                     </button>
                                 ) : (
-                                    <button onClick={() => setShowLoginModal(true)} className="flex items-center gap-3 px-6 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
+                                    <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="flex items-center gap-3 px-6 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
                                         <i className="fas fa-lock"></i> 管理員登入
                                     </button>
                                 )}
@@ -465,7 +549,6 @@
                                             <p className="text-slate-500 text-base font-medium mt-1">系統正在即時比對全國法規資料庫之最新修訂內容</p>
                                         </div>
                                         <div className="flex flex-col gap-4 items-end">
-                                            {/* 數據庫導入導出功能 - 對調位置 */}
                                             <div className="flex items-center gap-3 db-controls">
                                                 <input 
                                                     type="file" 
