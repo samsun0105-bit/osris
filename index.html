@@ -114,9 +114,9 @@
             const [loginError, setLoginError] = useState(false);
             const [changeError, setChangeError] = useState('');
 
-            // 密碼管理
+            // 密碼管理 (預設改為 1068)
             const [adminPassword, setAdminPassword] = useState(() => {
-                return localStorage.getItem('osh_admin_pwd') || '0000';
+                return localStorage.getItem('osh_admin_pwd') || '1068';
             });
 
             // 法規主數據
@@ -156,7 +156,7 @@
                 ];
             });
 
-            // 詳細條文資料庫 (可編輯)
+            // 詳細條文資料庫
             const [lawDetails, setLawDetails] = useState(() => {
                 const savedDetails = localStorage.getItem('osh_law_details_data');
                 if (savedDetails) return JSON.parse(savedDetails);
@@ -201,12 +201,10 @@
                 return { code: 'success', color: 'bg-emerald-600', text: '鑑別完成' };
             };
 
-            // 數據庫導入/導出
             const exportDatabase = () => {
                 const dataStr = JSON.stringify({ laws, lawDetails }, null, 2);
                 const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
                 const exportFileDefaultName = `OSH_Regulation_DB_${new Date().toISOString().split('T')[0]}.json`;
-                
                 const linkElement = document.createElement('a');
                 linkElement.setAttribute('href', dataUri);
                 linkElement.setAttribute('download', exportFileDefaultName);
@@ -216,7 +214,6 @@
             const importDatabase = (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
@@ -287,7 +284,6 @@
                 setLaws(prev => prev.map(law => law.id === id ? { ...law, [field]: value } : law));
             };
 
-            // 比對詳情編輯
             const updateDetailField = (lawId, rowIndex, field, value) => {
                 setLawDetails(prev => {
                     const current = prev[lawId] || { rows: [] };
@@ -315,7 +311,6 @@
                 });
             };
 
-            // 同步行為
             const handleAllSync = () => {
                 setSyncText('正在批次執行全法規鑑別同步，請稍候...');
                 setIsSyncing(true);
