@@ -107,14 +107,14 @@
             // 管理員狀態
             const [isAdmin, setIsAdmin] = useState(false);
             const [showLoginModal, setShowLoginModal] = useState(false);
-            const [authMode, setAuthMode] = useState('login'); // 'login' or 'changePassword'
+            const [authMode, setAuthMode] = useState('login'); 
             const [passwordInput, setPasswordInput] = useState('');
             const [oldPasswordInput, setOldPasswordInput] = useState('');
             const [newPasswordInput, setNewPasswordInput] = useState('');
             const [loginError, setLoginError] = useState(false);
             const [changeError, setChangeError] = useState('');
 
-            // 密碼管理 (預設改為 1068)
+            // 密碼管理
             const [adminPassword, setAdminPassword] = useState(() => {
                 return localStorage.getItem('osh_admin_pwd') || '1068';
             });
@@ -142,7 +142,7 @@
                     { id: 15, pcode: 'N0060025', name: '工業用機器人危害預防標準', type: '法規命令', remoteDate: '2018-02-14', localCheckDate: UNIFIED_INITIAL_DATE },
                     { id: 16, pcode: 'N0060011', name: '鍋爐及壓力容器安全規則', type: '法規命令', remoteDate: '2014-07-01', localCheckDate: UNIFIED_INITIAL_DATE },
                     { id: 17, pcode: 'J0160009', name: '游離輻射防護法', type: '法律', remoteDate: '2002-01-30', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 18, pcode: 'J0160022', name: '游離輻射防護法施行細則', type: '法規命令', remoteDate: '2008-02-22', localCheckDate: UNIFIED_INITIAL_DATE },
+                    { id: 18, pcode: 'J0160022', name: '游離輻射防護施行細則', type: '法規命令', remoteDate: '2008-02-22', localCheckDate: UNIFIED_INITIAL_DATE },
                     { id: 19, pcode: 'J0160004', name: '游離輻射防護安全標準', type: '法規命令', remoteDate: '2005-12-30', localCheckDate: UNIFIED_INITIAL_DATE },
                     { id: 20, pcode: 'J0160025', name: '放射性物質與可發生游離輻射設備及其輻輻射作業管理辦法', type: '法規命令', remoteDate: '2018-12-22', localCheckDate: UNIFIED_INITIAL_DATE },
                     { id: 21, pcode: 'J0160042', name: '放射性物質或可發生游離輻射設備操作人員管理辦法', type: '法規命令', remoteDate: '2009-04-17', localCheckDate: UNIFIED_INITIAL_DATE },
@@ -161,13 +161,12 @@
                 const savedDetails = localStorage.getItem('osh_law_details_data');
                 if (savedDetails) return JSON.parse(savedDetails);
                 
-                const initialDetails = {
-                    1: { rows: [{ no: '第 4 條', old: '本法適用於各業。但因事業規模、性質及風險程度...', new: '本法適用於各業。但因事業規模、性質及風險程度，經中央主管機關指定公告者，<ins>得分階段適用</ins>。', note: '擴大適用範圍' }, { no: '第 45 條', old: '有下列情事之一者，處新臺幣三萬元以上十五萬元以下罰鍰...', new: '有下列情事之一者，處新臺幣三萬元以上<ins>三十萬元</ins>以下罰鍰...', note: '罰則加重' }] },
+                return {
+                    1: { rows: [{ no: '第 4 條', old: '本法適用於各業。但因事業規模、性質及風險程度...', new: '本法適用於各業。但因事業規模、性質及風險程度，經中央主管機關指定公告者，<ins>得分階段適用</ins>。', note: '擴大適用範圍' }, { no: '第 4 條', old: '有下列情事之一者，處新臺幣三萬元以上十五萬元以下罰鍰...', new: '有下列情事之一者，處新臺幣三萬元以上<ins>三十萬元</ins>以下罰鍰...', note: '罰則加重' }] },
                     4: { rows: [{ no: '第 21 條', old: '雇主對於勞工從事作業，應採取必要之安全設備及措施。', new: '雇主對於勞工從事作業，應採取必要之安全設備及措施，<ins>並應落實自動檢查計畫</ins>。', note: '加強自主管理' }, { no: '第 128-1 條', old: '(新增條文)', new: '<ins>雇主對於高溫環境作業勞工，應提供必要之散熱設備及足夠之飲用水。</ins>', note: '新增熱危害預防' }] },
                     8: { rows: [{ no: '附表一', old: '甲苯容許濃度：100 ppm', new: '甲苯容許濃度：<ins>50 ppm</ins>', note: '標準趨嚴' }, { no: '附表一', old: '二甲苯容許濃度：100 ppm', new: '二甲苯容許濃度：<ins>80 ppm</ins>', note: '標準趨嚴' }] },
                     24: { rows: [{ no: '第 32-1 條', old: '雇主依第三十二條第一項及第二項規定使勞工延長工作時間...', new: '雇主依第三十二條第一項及第二項規定使勞工延長工作時間，<ins>應核實記載至分鐘為止</ins>。', note: '工時記載精細化' }] }
                 };
-                return initialDetails;
             });
 
             useEffect(() => {
@@ -201,6 +200,41 @@
                 return { code: 'success', color: 'bg-emerald-600', text: '鑑別完成' };
             };
 
+            // 校對 JSON 檔案內容的邏輯
+            const processSyncFile = (file, targetLawId = null) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const syncData = JSON.parse(e.target.result);
+                        setLaws(prevLaws => {
+                            return prevLaws.map(law => {
+                                if (targetLawId !== null && law.id !== targetLawId) return law;
+                                const match = syncData.find(item => item.Pcode === law.pcode);
+                                if (match) {
+                                    const jsonDate = new Date(match.LastUpdate);
+                                    const currentRemote = new Date(law.remoteDate);
+                                    if (jsonDate > currentRemote) {
+                                        return { ...law, remoteDate: match.LastUpdate };
+                                    }
+                                }
+                                return law;
+                            });
+                        });
+                        
+                        if (targetLawId) {
+                            finalizeSingleSync(targetLawId);
+                        } else {
+                            finalizeAllSync();
+                        }
+                    } catch (err) {
+                        alert('校對失敗：無法解析 law_sync_status.json。');
+                        setIsSyncing(false);
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            // 資料庫匯入匯出
             const exportDatabase = () => {
                 const dataStr = JSON.stringify({ laws, lawDetails }, null, 2);
                 const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
@@ -271,7 +305,7 @@
 
             const addNewLaw = () => {
                 const newId = Math.max(...laws.map(l => l.id), 0) + 1;
-                setLaws([...laws, { id: newId, name: '新法規名稱', type: '法規命令', remoteDate: '2026-03-01', localCheckDate: '2026-03-01' }]);
+                setLaws([...laws, { id: newId, pcode: 'NEW_CODE', name: '新法規名稱', type: '法規命令', remoteDate: '2026-03-01', localCheckDate: '2026-03-01' }]);
             };
 
             const removeLaw = (id) => {
@@ -311,24 +345,69 @@
                 });
             };
 
+            // 同步流程
             const handleAllSync = () => {
-                setSyncText('正在批次執行全法規鑑別同步，請稍候...');
-                setIsSyncing(true);
+                if (isAdmin) {
+                    // 管理員模式：啟動選擇視窗
+                    setSyncText('請選擇 law_sync_status.json 以進行 Pcode 校對...');
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            setSyncText('正在批次執行全法規鑑別同步，請稍候...');
+                            setIsSyncing(true);
+                            setTimeout(() => processSyncFile(file), 5000);
+                        }
+                    };
+                    input.click();
+                } else {
+                    // 預覽模式：直接讀取動作
+                    setSyncText('正在批次執行全法規鑑別同步，請稍候...');
+                    setIsSyncing(true);
+                    finalizeAllSync();
+                }
+            };
+
+            const finalizeAllSync = () => {
                 setTimeout(() => {
                     const today = new Date().toISOString().split('T')[0];
                     setLaws(prev => prev.map(law => ({ ...law, localCheckDate: today })));
                     setIsSyncing(false);
-                }, 5000); 
+                }, 5000);
             };
 
             const handleSingleSync = (lawId) => {
-                setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
-                setIsSyncing(true);
+                if (isAdmin) {
+                    // 管理員模式：啟動選擇視窗
+                    setSyncText('正在開啟 Pcode 校對權限...');
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            setSyncText('正在校對 Pcode 異動並更新鑑別紀錄...');
+                            setIsSyncing(true);
+                            setTimeout(() => processSyncFile(file, lawId), 3000);
+                        }
+                    };
+                    input.click();
+                } else {
+                    // 預覽模式：直接讀取動作
+                    setSyncText('正在從資料庫校對本法規異動狀態...');
+                    setIsSyncing(true);
+                    finalizeSingleSync(lawId);
+                }
+            };
+
+            const finalizeSingleSync = (lawId) => {
                 setTimeout(() => {
                     const today = new Date().toISOString().split('T')[0];
                     setLaws(prev => prev.map(law => law.id === lawId ? { ...law, localCheckDate: today } : law));
                     setIsSyncing(false);
-                }, 2500);
+                }, 3000);
             };
 
             const handleExport = () => {
@@ -338,6 +417,7 @@
                     const status = getLawStatus(law.remoteDate, law.localCheckDate);
                     return {
                         "序號": index + 1,
+                        "Pcode": law.pcode,
                         "法規名稱": law.name,
                         "法規類別": law.type,
                         "鑑別季度": `${now.getFullYear()} Q${quarter}`,
@@ -353,7 +433,7 @@
             };
 
             const filteredLaws = useMemo(() => {
-                return laws.filter(law => (filterType === '全部' || law.type === filterType) && law.name.includes(searchQuery));
+                return laws.filter(law => (filterType === '全部' || law.type === filterType) && (law.name.includes(searchQuery) || law.pcode.includes(searchQuery)));
             }, [searchQuery, filterType, laws]);
 
             const startSync = (law) => {
@@ -502,21 +582,26 @@
                             </div>
                             
                             <div className="flex items-center gap-4">
+                                {/* 智能同步：固定寬度 w-40 以與登入按鈕一致 */}
+                                <button onClick={handleAllSync} className="hidden lg:flex items-center justify-center gap-3 w-40 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg border-b-4 border-emerald-900">
+                                    <i className="fas fa-rotate"></i> 智能同步
+                                </button>
+                                
+                                {/* 匯出總表：固定寬度 w-40 以與登入按鈕一致 */}
+                                <button onClick={handleExport} className="hidden lg:flex items-center justify-center gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-800 transition-all shadow-lg border-b-4 border-slate-950">
+                                    <i className="fas fa-file-export"></i> 匯出總表
+                                </button>
+
+                                {/* 管理員登入/儲存並登出：固定寬度 w-40 */}
                                 {isAdmin ? (
-                                    <button onClick={handleLogout} className="flex items-center gap-3 px-6 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
+                                    <button onClick={handleLogout} className="flex items-center justify-center gap-3 w-40 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
                                         <i className="fas fa-sign-out-alt"></i> 儲存並登出
                                     </button>
                                 ) : (
-                                    <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="flex items-center gap-3 px-6 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
+                                    <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="flex items-center justify-center gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
                                         <i className="fas fa-lock"></i> 管理員登入
                                     </button>
                                 )}
-                                <button onClick={handleAllSync} className="hidden lg:flex items-center gap-3 px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-black hover:bg-indigo-700 transition-all shadow-lg active:scale-95 border-b-4 border-indigo-900">
-                                    <i className="fas fa-bolt"></i> 一鍵同步
-                                </button>
-                                <button onClick={handleExport} className="hidden lg:flex items-center gap-3 px-6 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-800 transition-all shadow-lg active:scale-95 border-b-4 border-slate-950">
-                                    <i className="fas fa-file-export"></i> 匯出總表
-                                </button>
                             </div>
                         </div>
                     </header>
@@ -582,7 +667,7 @@
                                                     <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
                                                     <input 
                                                         type="text" 
-                                                        placeholder="快速搜尋法規名稱..." 
+                                                        placeholder="快速搜尋法規名稱或 Pcode..." 
                                                         className="pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl text-base w-full md:w-80 focus:ring-4 focus:ring-blue-500/10 outline-none shadow-sm transition-all"
                                                         value={searchQuery}
                                                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -607,22 +692,24 @@
                                                         <div className="flex flex-col min-w-0 flex-1">
                                                             <div className="flex items-center gap-3 flex-wrap mb-2.5">
                                                                 {isAdmin ? (
-                                                                    <div className="flex-1 flex items-center gap-2">
+                                                                    <div className="flex-1 flex flex-col gap-1">
                                                                         <input 
                                                                             className="font-black text-slate-800 truncate text-xl admin-input"
                                                                             value={law.name}
                                                                             onChange={(e) => updateLawField(law.id, 'name', e.target.value)}
                                                                         />
-                                                                        <button 
-                                                                            onClick={() => removeLaw(law.id)}
-                                                                            className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center text-xs"
-                                                                            title="移除此法規"
-                                                                        >
-                                                                            <i className="fas fa-trash-alt"></i>
-                                                                        </button>
+                                                                        <input 
+                                                                            className="text-[10px] font-bold text-slate-400 admin-input uppercase"
+                                                                            value={law.pcode}
+                                                                            onChange={(e) => updateLawField(law.id, 'pcode', e.target.value)}
+                                                                            placeholder="Pcode"
+                                                                        />
                                                                     </div>
                                                                 ) : (
-                                                                    <h3 className="font-black text-slate-800 truncate text-xl">{law.name}</h3>
+                                                                    <div>
+                                                                        <h3 className="font-black text-slate-800 truncate text-xl">{law.name}</h3>
+                                                                        <span className="text-[10px] text-slate-400 font-bold">{law.pcode}</span>
+                                                                    </div>
                                                                 )}
                                                                 <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-lg border border-slate-200 uppercase">{law.type}</span>
                                                                 {status.code === 'danger' && <span className="new-badge text-[10px] font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-lg border border-rose-200">法規已異動</span>}
@@ -659,10 +746,19 @@
                                                     </div>
 
                                                     <div className="flex items-center gap-4 shrink-0 ml-20 lg:ml-0">
-                                                        <button onClick={() => startSync(law)} className="flex-1 md:flex-none px-6 py-4 rounded-2xl font-black text-sm bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-all active:scale-95">比對詳情</button>
+                                                        {isAdmin && (
+                                                            <button 
+                                                                onClick={() => removeLaw(law.id)}
+                                                                className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                                                                title="移除此法規"
+                                                            >
+                                                                <i className="fas fa-trash-alt"></i>
+                                                            </button>
+                                                        )}
+                                                        <button onClick={() => startSync(law)} className="px-6 py-4 rounded-2xl font-black text-sm bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-all active:scale-95">比對詳情</button>
                                                         <button
                                                             onClick={() => handleSingleSync(law.id)}
-                                                            className={`flex-1 md:flex-none px-10 py-4 rounded-2xl font-black text-sm text-white shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ${status.code === 'danger' ? 'bg-rose-600 shadow-rose-600/30 hover:bg-rose-700 animate-pulse' : 'bg-blue-600 shadow-blue-600/30 hover:bg-blue-700'}`}
+                                                            className={`px-10 py-4 rounded-2xl font-black text-sm text-white shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ${status.code === 'danger' ? 'bg-rose-600 shadow-rose-600/30 hover:bg-rose-700 animate-pulse' : 'bg-blue-600 shadow-blue-600/30 hover:bg-blue-700'}`}
                                                         >
                                                             立即鑑別
                                                         </button>
@@ -698,16 +794,7 @@
                                                     <div className="flex gap-6">
                                                         <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
                                                             <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1">最新公佈日</span>
-                                                            {isAdmin ? (
-                                                                <input 
-                                                                    type="date"
-                                                                    className="text-sm font-black text-slate-700 admin-input"
-                                                                    value={selectedLaw?.remoteDate}
-                                                                    onChange={(e) => updateLawField(selectedLaw.id, 'remoteDate', e.target.value)}
-                                                                />
-                                                            ) : (
-                                                                <span className="text-sm font-black text-slate-700">{selectedLaw?.remoteDate}</span>
-                                                            )}
+                                                            <span className="text-sm font-black text-slate-700">{selectedLaw?.remoteDate}</span>
                                                         </div>
                                                         <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
                                                             <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1">最近鑑別/登錄日</span>
@@ -761,7 +848,6 @@
                                                                         <button 
                                                                             onClick={() => removeDetailRow(selectedLaw.id, idx)}
                                                                             className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center row-action-btn"
-                                                                            title="移除此條文"
                                                                         >
                                                                             <i className="fas fa-trash-alt"></i>
                                                                         </button>
