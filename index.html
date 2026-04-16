@@ -191,13 +191,11 @@
                 return `${y}/${m}/${d} ${hh}:${mm}:${ss}`;
             };
 
-            const getLawStatus = (remoteDate, localDate) => {
+            // 全新的狀態邏輯判斷
+            const checkLawDiff = (remoteDate, localDate) => {
                 const rDate = new Date(remoteDate);
                 const lDate = localDate ? new Date(localDate) : new Date(0);
-                const today = new Date();
-                if (rDate > lDate) return { code: 'danger', color: 'bg-rose-500', text: '需重新鑑別' };
-                if ((today - lDate) / (1000 * 60 * 60 * 24) > 365) return { code: 'warning', color: 'bg-amber-500', text: '例行性檢視' };
-                return { code: 'success', color: 'bg-emerald-600', text: '鑑別完成' };
+                return rDate > lDate;
             };
 
             // 校對 JSON 檔案內容的邏輯
@@ -318,6 +316,16 @@
                 setLaws(prev => prev.map(law => law.id === id ? { ...law, [field]: value } : law));
             };
 
+            const moveLaw = (index, direction) => {
+                const newLaws = [...laws];
+                const targetIndex = index + direction;
+                if (targetIndex < 0 || targetIndex >= newLaws.length) return;
+                const temp = newLaws[index];
+                newLaws[index] = newLaws[targetIndex];
+                newLaws[targetIndex] = temp;
+                setLaws(newLaws);
+            };
+
             const updateDetailField = (lawId, rowIndex, field, value) => {
                 setLawDetails(prev => {
                     const current = prev[lawId] || { rows: [] };
@@ -348,7 +356,6 @@
             // 同步流程
             const handleAllSync = () => {
                 if (isAdmin) {
-                    // 管理員模式：啟動選擇視窗
                     setSyncText('請選擇 law_sync_status.json 以進行 Pcode 校對...');
                     const input = document.createElement('input');
                     input.type = 'file';
@@ -363,7 +370,6 @@
                     };
                     input.click();
                 } else {
-                    // 預覽模式：直接讀取動作
                     setSyncText('正在批次執行全法規鑑別同步，請稍候...');
                     setIsSyncing(true);
                     finalizeAllSync();
@@ -380,7 +386,6 @@
 
             const handleSingleSync = (lawId) => {
                 if (isAdmin) {
-                    // 管理員模式：啟動選擇視窗
                     setSyncText('正在開啟 Pcode 校對權限...');
                     const input = document.createElement('input');
                     input.type = 'file';
@@ -395,7 +400,6 @@
                     };
                     input.click();
                 } else {
-                    // 預覽模式：直接讀取動作
                     setSyncText('正在從資料庫校對本法規異動狀態...');
                     setIsSyncing(true);
                     finalizeSingleSync(lawId);
@@ -414,7 +418,7 @@
                 const now = new Date();
                 const quarter = Math.ceil((now.getMonth() + 1) / 3);
                 const exportData = laws.map((law, index) => {
-                    const status = getLawStatus(law.remoteDate, law.localCheckDate);
+                    const isDiff = checkLawDiff(law.remoteDate, law.localCheckDate);
                     return {
                         "序號": index + 1,
                         "Pcode": law.pcode,
@@ -423,7 +427,7 @@
                         "鑑別季度": `${now.getFullYear()} Q${quarter}`,
                         "全國法規資料庫日期": law.remoteDate,
                         "最近鑑別/登錄日": law.localCheckDate,
-                        "合規狀態": status.text
+                        "合規狀態": isDiff ? "鑑別異常" : "鑑別完成"
                     };
                 });
                 const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -582,17 +586,14 @@
                             </div>
                             
                             <div className="flex items-center gap-4">
-                                {/* 智能同步：固定寬度 w-40 以與登入按鈕一致 */}
                                 <button onClick={handleAllSync} className="hidden lg:flex items-center justify-center gap-3 w-40 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg border-b-4 border-emerald-900">
                                     <i className="fas fa-rotate"></i> 智能同步
                                 </button>
                                 
-                                {/* 匯出總表：固定寬度 w-40 以與登入按鈕一致 */}
                                 <button onClick={handleExport} className="hidden lg:flex items-center justify-center gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-800 transition-all shadow-lg border-b-4 border-slate-950">
                                     <i className="fas fa-file-export"></i> 匯出總表
                                 </button>
 
-                                {/* 管理員登入/儲存並登出：固定寬度 w-40 */}
                                 {isAdmin ? (
                                     <button onClick={handleLogout} className="flex items-center justify-center gap-3 w-40 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
                                         <i className="fas fa-sign-out-alt"></i> 儲存並登出
@@ -679,14 +680,33 @@
 
                                     <div className="grid grid-cols-1 gap-5">
                                         {filteredLaws.map((law, index) => {
-                                            const status = getLawStatus(law.remoteDate, law.localCheckDate);
+                                            const isLawDiff = checkLawDiff(law.remoteDate, law.localCheckDate);
+                                            
                                             return (
                                                 <div key={law.id} className="p-6 rounded-3xl transition-all flex flex-col lg:flex-row lg:items-center justify-between law-card-glow gap-8 relative group">
                                                     <div className="flex gap-6 items-center flex-1">
-                                                        <div className="relative shrink-0">
+                                                        <div className="relative shrink-0 flex flex-col items-center gap-2">
                                                             <div className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center shadow-lg bg-orange-400 text-white">
                                                                 <span className="text-sm font-black tracking-tight">{index + 1}</span>
                                                             </div>
+                                                            {isAdmin && (
+                                                                <div className="flex flex-col gap-1">
+                                                                    <button 
+                                                                        onClick={() => moveLaw(index, -1)}
+                                                                        disabled={index === 0}
+                                                                        className={`text-[10px] w-6 h-6 flex items-center justify-center rounded-md border transition-all ${index === 0 ? 'text-slate-300 border-slate-200' : 'text-slate-500 border-slate-300 hover:bg-slate-100'}`}
+                                                                    >
+                                                                        <i className="fas fa-chevron-up"></i>
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => moveLaw(index, 1)}
+                                                                        disabled={index === laws.length - 1}
+                                                                        className={`text-[10px] w-6 h-6 flex items-center justify-center rounded-md border transition-all ${index === laws.length - 1 ? 'text-slate-300 border-slate-200' : 'text-slate-500 border-slate-300 hover:bg-slate-100'}`}
+                                                                    >
+                                                                        <i className="fas fa-chevron-down"></i>
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         <div className="flex flex-col min-w-0 flex-1">
@@ -698,21 +718,25 @@
                                                                             value={law.name}
                                                                             onChange={(e) => updateLawField(law.id, 'name', e.target.value)}
                                                                         />
-                                                                        <input 
-                                                                            className="text-[10px] font-bold text-slate-400 admin-input uppercase"
-                                                                            value={law.pcode}
-                                                                            onChange={(e) => updateLawField(law.id, 'pcode', e.target.value)}
-                                                                            placeholder="Pcode"
-                                                                        />
+                                                                        {/* 固定顯示 Pcode : 僅編輯後方代碼 */}
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Pcode : </span>
+                                                                            <input 
+                                                                                className="text-[10px] font-bold text-slate-400 admin-input uppercase flex-1"
+                                                                                value={law.pcode}
+                                                                                onChange={(e) => updateLawField(law.id, 'pcode', e.target.value)}
+                                                                                placeholder="代碼"
+                                                                            />
+                                                                        </div>
                                                                     </div>
                                                                 ) : (
                                                                     <div>
                                                                         <h3 className="font-black text-slate-800 truncate text-xl">{law.name}</h3>
-                                                                        <span className="text-[10px] text-slate-400 font-bold">{law.pcode}</span>
+                                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pcode : {law.pcode}</span>
                                                                     </div>
                                                                 )}
                                                                 <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-lg border border-slate-200 uppercase">{law.type}</span>
-                                                                {status.code === 'danger' && <span className="new-badge text-[10px] font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-lg border border-rose-200">法規已異動</span>}
+                                                                {isLawDiff && <span className="new-badge text-[10px] font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-lg border border-rose-200">法規已異動</span>}
                                                             </div>
 
                                                             <div className="flex flex-wrap items-center gap-y-3">
@@ -732,13 +756,20 @@
                                                                 <div className="w-px h-8 bg-slate-200 mx-6 hidden sm:block"></div>
                                                                 <div className="flex flex-col min-w-[140px]">
                                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">最近鑑別/登錄日</span>
-                                                                    <span className={`text-sm font-black ${status.code === 'danger' ? 'text-rose-500' : 'text-emerald-700'}`}>
+                                                                    <span className={`text-sm font-black ${isLawDiff ? 'text-rose-500' : 'text-emerald-700'}`}>
                                                                         {law.localCheckDate}
                                                                     </span>
                                                                 </div>
+                                                                
                                                                 <div className="ml-6 flex items-center gap-2">
-                                                                    <span className={`text-[11px] font-black px-4 py-1.5 rounded-lg shadow-sm ${status.code === 'success' ? 'bg-emerald-600 text-white' : status.code === 'danger' ? 'bg-rose-50 text-rose-500' : 'bg-slate-50 text-slate-400'}`}>
-                                                                        {status.text}
+                                                                    <span className={`text-[11px] font-black px-4 py-1.5 rounded-lg shadow-sm transition-all ${!isLawDiff ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                                                        鑑別完成
+                                                                    </span>
+                                                                    <span className={`text-[11px] font-black px-4 py-1.5 rounded-lg shadow-sm transition-all ${isLawDiff ? 'bg-rose-600 text-white animate-pulse' : 'bg-slate-100 text-slate-400'}`}>
+                                                                        鑑別異常
+                                                                    </span>
+                                                                    <span className={`text-[11px] font-black px-4 py-1.5 rounded-lg shadow-sm transition-all ${isLawDiff ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                                                        法規變動
                                                                     </span>
                                                                 </div>
                                                             </div>
@@ -758,7 +789,7 @@
                                                         <button onClick={() => startSync(law)} className="px-6 py-4 rounded-2xl font-black text-sm bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-all active:scale-95">比對詳情</button>
                                                         <button
                                                             onClick={() => handleSingleSync(law.id)}
-                                                            className={`px-10 py-4 rounded-2xl font-black text-sm text-white shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ${status.code === 'danger' ? 'bg-rose-600 shadow-rose-600/30 hover:bg-rose-700 animate-pulse' : 'bg-blue-600 shadow-blue-600/30 hover:bg-blue-700'}`}
+                                                            className={`px-10 py-4 rounded-2xl font-black text-sm text-white shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ${isLawDiff ? 'bg-rose-600 shadow-rose-600/30 hover:bg-rose-700 animate-pulse' : 'bg-blue-600 shadow-blue-600/30 hover:bg-blue-700'}`}
                                                         >
                                                             立即鑑別
                                                         </button>
