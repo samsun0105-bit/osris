@@ -363,14 +363,14 @@
                     input.onchange = (e) => {
                         const file = e.target.files[0];
                         if (file) {
-                            setSyncText('正在批次執行全法規鑑別同步，請稍候...');
+                            setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
                             setIsSyncing(true);
                             setTimeout(() => processSyncFile(file), 5000);
                         }
                     };
                     input.click();
                 } else {
-                    setSyncText('正在批次執行全法規鑑別同步，請稍候...');
+                    setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
                     setIsSyncing(true);
                     finalizeAllSync();
                 }
@@ -393,14 +393,14 @@
                     input.onchange = (e) => {
                         const file = e.target.files[0];
                         if (file) {
-                            setSyncText('正在校對 Pcode 異動並更新鑑別紀錄...');
+                            setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
                             setIsSyncing(true);
                             setTimeout(() => processSyncFile(file, lawId), 3000);
                         }
                     };
                     input.click();
                 } else {
-                    setSyncText('正在從資料庫校對本法規異動狀態...');
+                    setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
                     setIsSyncing(true);
                     finalizeSingleSync(lawId);
                 }
@@ -613,7 +613,7 @@
                                 <div className="scan-line absolute inset-0"></div>
                                 <div className="relative z-10">
                                     <i className="fas fa-circle-notch text-6xl text-blue-600 animate-spin mb-8"></i>
-                                    <h3 className="text-2xl font-black text-slate-800 px-4">{syncText}</h3>
+                                    <h3 className="text-2xl font-black text-slate-800 px-4 whitespace-pre-line">{syncText}</h3>
                                     <p className="text-slate-500 mt-3 text-base font-medium">系統正在即時更新大數據資料庫紀錄...</p>
                                 </div>
                             </div>
@@ -718,7 +718,6 @@
                                                                             value={law.name}
                                                                             onChange={(e) => updateLawField(law.id, 'name', e.target.value)}
                                                                         />
-                                                                        {/* 固定顯示 Pcode : 僅編輯後方代碼 */}
                                                                         <div className="flex items-center gap-1">
                                                                             <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Pcode : </span>
                                                                             <input 
@@ -735,7 +734,21 @@
                                                                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pcode : {law.pcode}</span>
                                                                     </div>
                                                                 )}
-                                                                <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-lg border border-slate-200 uppercase">{law.type}</span>
+                                                                
+                                                                {isAdmin ? (
+                                                                    <select 
+                                                                        className="text-[10px] font-black bg-white text-blue-600 px-2 py-1 rounded-lg border border-blue-200 uppercase outline-none"
+                                                                        value={law.type}
+                                                                        onChange={(e) => updateLawField(law.id, 'type', e.target.value)}
+                                                                    >
+                                                                        <option value="法律">法律</option>
+                                                                        <option value="法規命令">法規命令</option>
+                                                                        <option value="行政規則">行政規則</option>
+                                                                    </select>
+                                                                ) : (
+                                                                    <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-lg border border-slate-200 uppercase">{law.type}</span>
+                                                                )}
+                                                                
                                                                 {isLawDiff && <span className="new-badge text-[10px] font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-lg border border-rose-200">法規已異動</span>}
                                                             </div>
 
@@ -745,20 +758,29 @@
                                                                     {isAdmin ? (
                                                                         <input 
                                                                             type="date"
-                                                                            className="text-sm font-bold text-slate-700 admin-input"
+                                                                            className={`text-sm font-bold admin-input ${isLawDiff ? 'text-rose-600' : 'text-blue-600'}`}
                                                                             value={law.remoteDate}
                                                                             onChange={(e) => updateLawField(law.id, 'remoteDate', e.target.value)}
                                                                         />
                                                                     ) : (
-                                                                        <span className="text-sm font-bold text-slate-700">{law.remoteDate}</span>
+                                                                        <span className={`text-sm font-bold ${isLawDiff ? 'text-rose-600' : 'text-slate-700'}`}>{law.remoteDate}</span>
                                                                     )}
                                                                 </div>
                                                                 <div className="w-px h-8 bg-slate-200 mx-6 hidden sm:block"></div>
                                                                 <div className="flex flex-col min-w-[140px]">
                                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">最近鑑別/登錄日</span>
-                                                                    <span className={`text-sm font-black ${isLawDiff ? 'text-rose-500' : 'text-emerald-700'}`}>
-                                                                        {law.localCheckDate}
-                                                                    </span>
+                                                                    {isAdmin ? (
+                                                                        <input 
+                                                                            type="date"
+                                                                            className={`text-sm font-black admin-input ${isLawDiff ? 'text-rose-500' : 'text-emerald-700'}`}
+                                                                            value={law.localCheckDate}
+                                                                            onChange={(e) => updateLawField(law.id, 'localCheckDate', e.target.value)}
+                                                                        />
+                                                                    ) : (
+                                                                        <span className={`text-sm font-black ${isLawDiff ? 'text-rose-500' : 'text-emerald-700'}`}>
+                                                                            {law.localCheckDate}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                                 
                                                                 <div className="ml-6 flex items-center gap-2">
@@ -786,10 +808,16 @@
                                                                 <i className="fas fa-trash-alt"></i>
                                                             </button>
                                                         )}
-                                                        <button onClick={() => startSync(law)} className="px-6 py-4 rounded-2xl font-black text-sm bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-all active:scale-95">比對詳情</button>
+                                                        <button 
+                                                            onClick={() => startSync(law)} 
+                                                            className={`px-6 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 ${isLawDiff ? 'bg-rose-600 text-white shadow-xl shadow-rose-600/30 hover:bg-rose-700 animate-pulse border-none' : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'}`}
+                                                        >
+                                                            比對詳情
+                                                        </button>
                                                         <button
                                                             onClick={() => handleSingleSync(law.id)}
-                                                            className={`px-10 py-4 rounded-2xl font-black text-sm text-white shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ${isLawDiff ? 'bg-rose-600 shadow-rose-600/30 hover:bg-rose-700 animate-pulse' : 'bg-blue-600 shadow-blue-600/30 hover:bg-blue-700'}`}
+                                                            className={`px-10 py-4 rounded-2xl font-black text-sm text-white shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ${isLawDiff ? 'bg-slate-300 shadow-none cursor-default text-slate-500' : 'bg-blue-600 shadow-blue-600/30 hover:bg-blue-700'}`}
+                                                            disabled={isLawDiff}
                                                         >
                                                             立即鑑別
                                                         </button>
@@ -825,7 +853,9 @@
                                                     <div className="flex gap-6">
                                                         <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
                                                             <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1">最新公佈日</span>
-                                                            <span className="text-sm font-black text-slate-700">{selectedLaw?.remoteDate}</span>
+                                                            <span className={`text-sm font-black ${checkLawDiff(selectedLaw?.remoteDate, selectedLaw?.localCheckDate) ? 'text-rose-600' : 'text-slate-700'}`}>
+                                                                {selectedLaw?.remoteDate}
+                                                            </span>
                                                         </div>
                                                         <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
                                                             <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1">最近鑑別/登錄日</span>
@@ -839,6 +869,7 @@
                                                     </button>
                                                     <button
                                                         onClick={() => {
+                                                            setSyncText('正在重新分析條文異動並更新鑑別紀錄...\n系統正在即時更新大數據資料庫紀錄...');
                                                             handleSingleSync(selectedLaw.id);
                                                             setActiveTab('monitor');
                                                         }}
