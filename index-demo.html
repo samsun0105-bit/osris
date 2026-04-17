@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>職業安全法規鑑別系統 - 模擬異常展示版</title>
+    <title>職業安全法規鑑別系統 - 模擬異常展示版 (IndexedDB)</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -91,9 +91,66 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect, useRef } = React;
 
+        // --- IndexedDB 核心邏輯 ---
+        const DB_NAME = 'osh_database';
+        const DB_VERSION = 1;
+
+        const openDB = () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('laws')) {
+                        db.createObjectStore('laws', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('details')) {
+                        db.createObjectStore('details', { keyPath: 'lawId' });
+                    }
+                    if (!db.objectStoreNames.contains('config')) {
+                        db.createObjectStore('config', { keyPath: 'key' });
+                    }
+                };
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        };
+
+        const saveData = async (storeName, data) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readwrite');
+                const store = tx.objectStore(storeName);
+                if (Array.isArray(data)) {
+                    store.clear();
+                    data.forEach(item => store.put(item));
+                } else if (storeName === 'details') {
+                    // 對於細節，我們保存整個物件或個別 lawId 的資料
+                    // 這裡簡化為更新特定 lawId 或整個覆蓋
+                    Object.keys(data).forEach(id => {
+                        store.put({ lawId: parseInt(id), ...data[id] });
+                    });
+                } else {
+                    store.put(data);
+                }
+                tx.oncomplete = () => resolve();
+                tx.onerror = (e) => reject(e.target.error);
+            });
+        };
+
+        const getAllData = async (storeName) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readonly');
+                const store = tx.objectStore(storeName);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        };
+
         const App = () => {
             const UNIFIED_INITIAL_DATE = '2026-03-02';
-            const fileInputRef = useRef(null);
+            const [isLoaded, setIsLoaded] = useState(false);
 
             // State 管理
             const [activeTab, setActiveTab] = useState('monitor');
@@ -114,65 +171,105 @@
             const [loginError, setLoginError] = useState(false);
             const [changeError, setChangeError] = useState('');
 
-            // 密碼管理
-            const [adminPassword, setAdminPassword] = useState(() => {
-                return localStorage.getItem('osh_admin_pwd') || '1068';
-            });
+            // 數據狀態
+            const [adminPassword, setAdminPassword] = useState('1068');
+            const [laws, setLaws] = useState([]);
+            const [lawDetails, setLawDetails] = useState({});
 
-            // 法規主數據
-            const [laws, setLaws] = useState(() => {
-                const savedLaws = localStorage.getItem('osh_laws_data');
-                if (savedLaws) return JSON.parse(savedLaws);
-                
-                return [
-                    { id: 1, pcode: 'N0060001', name: '職業安全衛生法', type: '法律', remoteDate: UNIFIED_INITIAL_DATE, localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 2, pcode: 'N0060002', name: '職業安全衛生法施行細則', type: '法規命令', remoteDate: '2020-02-27', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 3, pcode: 'N0060027', name: '職業安全衛生管理辦法', type: '法規命令', remoteDate: '2022-01-05', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 4, pcode: 'N0060009', name: '職業安全衛生設施規則', type: '法規命令', remoteDate: UNIFIED_INITIAL_DATE, localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 5, pcode: 'N0060010', name: '職業安全衛生教育訓練規則', type: '法規命令', remoteDate: '2025-09-04', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 6, pcode: 'N0060023', name: '職業安全衛生標示設置準則', type: '法規命令', remoteDate: '2014-07-02', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 7, pcode: 'N0060033', name: '勞工作業環境監測實施辦法', type: '法規命令', remoteDate: '2016-11-02', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 8, pcode: 'N0060004', name: '勞工作業場所容許暴露標準', type: '法規命令', remoteDate: UNIFIED_INITIAL_DATE, localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 9, pcode: 'N0060017', name: '有機溶劑中毒預防規則', type: '法規命令', remoteDate: '2025-05-14', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 10, pcode: 'N0060054', name: '危害性化學品標示及通識規則', type: '法規命令', remoteDate: '2018-11-09', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 11, pcode: 'N0060022', name: '勞工健康保護規則', type: '法規命令', remoteDate: '2021-12-22', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 12, pcode: 'N0060065', name: '女性勞工母性健康保護實施辦法', type: '法規命令', remoteDate: '2024-05-31', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 13, pcode: 'N0060032', name: '妊娠與分娩後女性及未滿十八歲勞工禁止從事危險性或有害性工作認定標準', type: '行政規則', remoteDate: '2025-11-20', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 14, pcode: 'N0060012', name: '精密作業勞工視機能保護設施標準', type: '法規命令', remoteDate: '2014-03-30', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 15, pcode: 'N0060025', name: '工業用機器人危害預防標準', type: '法規命令', remoteDate: '2018-02-14', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 16, pcode: 'N0060011', name: '鍋爐及壓力容器安全規則', type: '法規命令', remoteDate: '2014-07-01', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 17, pcode: 'J0160009', name: '游離輻射防護法', type: '法律', remoteDate: '2002-01-30', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 18, pcode: 'J0160022', name: '游離輻射防護施行細則', type: '法規命令', remoteDate: '2008-02-22', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 19, pcode: 'J0160004', name: '游離輻射防護安全標準', type: '法規命令', remoteDate: '2005-12-30', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 20, pcode: 'J0160025', name: '放射性物質與可發生游離輻射設備及其輻輻射作業管理辦法', type: '法規命令', remoteDate: '2018-12-22', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 21, pcode: 'J0160042', name: '放射性物質或可發生游離輻射設備操作人員管理辦法', type: '法規命令', remoteDate: '2009-04-17', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 22, pcode: 'N0030011', name: '事業單位僱用女性勞工夜間工作場所必要之安全衛生設施標準', type: '法規命令', remoteDate: '2015-03-31', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 23, pcode: 'N0060034', name: '機械設備器具安全標準', type: '法規命令', remoteDate: '2022-05-11', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 24, pcode: 'N0030001', name: '勞動基準法', type: '法律', remoteDate: '2024-07-31', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 25, pcode: 'N0050031', name: '勞工職業災害保險及保護法', type: '法律', remoteDate: '2021-04-30', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 26, pcode: 'N0050039', name: '勞工職業災害保險及保護法施行細則', type: '法規命令', remoteDate: '2025-05-29', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 27, pcode: 'N0050035', name: '勞工職業災害保險及保護法第十條規定參加保險辦法', type: '法規命令', remoteDate: '2022-03-09', localCheckDate: UNIFIED_INITIAL_DATE },
-                    { id: 28, pcode: 'N0060020', name: '缺氧症預防規則', type: '法規命令', remoteDate: '2014-06-26', localCheckDate: UNIFIED_INITIAL_DATE }
-                ];
-            });
+            // 初始化：從 IndexedDB 載入數據
+            useEffect(() => {
+                const initData = async () => {
+                    try {
+                        const dbLaws = await getAllData('laws');
+                        const dbDetailsArray = await getAllData('details');
+                        const dbConfigs = await getAllData('config');
 
-            const [lawDetails, setLawDetails] = useState(() => {
-                const savedDetails = localStorage.getItem('osh_law_details_data');
-                if (savedDetails) return JSON.parse(savedDetails);
-                
-                return {
-                    1: { rows: [{ no: '第 4 條', old: '本法適用於各業。但因事業規模、性質及風險程度...', new: '本法適用於各業。但因事業規模、性質及風險程度，經中央主管機關指定公告者，<ins>得分階段適用</ins>。', note: '擴大適用範圍' }, { no: '第 4 條', old: '有下列情事之一者，處新臺幣三萬元以上十五萬元以下罰鍰...', new: '有下列情事之一者，處新臺幣三萬元以上<ins>三十萬元</ins>以下罰鍰...', note: '罰則加重' }] },
-                    4: { rows: [{ no: '第 21 條', old: '雇主對於勞工從事作業，應採取必要之安全設備及措施。', new: '雇主對於勞工從事作業，應採取必要之安全設備及措施，<ins>並應落實自動檢查計畫</ins>。', note: '加強自主管理' }, { no: '第 128-1 條', old: '(新增條文)', new: '<ins>雇主對於高溫環境作業勞工，應提供必要之散熱設備及足夠之飲用水。</ins>', note: '新增熱危害預防' }] },
-                    8: { rows: [{ no: '附表一', old: '甲苯容許濃度：100 ppm', new: '甲苯容許濃度：<ins>50 ppm</ins>', note: '標準趨嚴' }, { no: '附表一', old: '二甲苯容許濃度：100 ppm', new: '二甲苯容許濃度：<ins>80 ppm</ins>', note: '標準趨嚴' }] },
-                    24: { rows: [{ no: '第 32-1 條', old: '雇主依第三十二條第一項及第二項規定使勞工延長工作時間...', new: '雇主依第三十二條第一項及第二項規定使勞工延長工作時間，<ins>應核實記載至分鐘為止</ins>。', note: '工時記載精細化' }] }
+                        // 處理密碼
+                        const pwdConfig = dbConfigs.find(c => c.key === 'osh_admin_pwd');
+                        if (pwdConfig) setAdminPassword(pwdConfig.value);
+
+                        // 處理法規清單
+                        if (dbLaws.length > 0) {
+                            setLaws(dbLaws);
+                        } else {
+                            const defaultLaws = [
+                                { id: 1, pcode: 'N0060001', name: '職業安全衛生法', type: '法律', remoteDate: UNIFIED_INITIAL_DATE, localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 2, pcode: 'N0060002', name: '職業安全衛生法施行細則', type: '法規命令', remoteDate: '2020-02-27', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 3, pcode: 'N0060027', name: '職業安全衛生管理辦法', type: '法規命令', remoteDate: '2022-01-05', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 4, pcode: 'N0060009', name: '職業安全衛生設施規則', type: '法規命令', remoteDate: UNIFIED_INITIAL_DATE, localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 5, pcode: 'N0060010', name: '職業安全衛生教育訓練規則', type: '法規命令', remoteDate: '2025-09-04', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 6, pcode: 'N0060023', name: '職業安全衛生標示設置準則', type: '法規命令', remoteDate: '2014-07-02', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 7, pcode: 'N0060033', name: '勞工作業環境監測實施辦法', type: '法規命令', remoteDate: '2016-11-02', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 8, pcode: 'N0060004', name: '勞工作業場所容許暴露標準', type: '法規命令', remoteDate: UNIFIED_INITIAL_DATE, localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 9, pcode: 'N0060017', name: '有機溶劑中毒預防規則', type: '法規命令', remoteDate: '2025-05-14', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 10, pcode: 'N0060054', name: '危害性化學品標示及通識規則', type: '法規命令', remoteDate: '2018-11-09', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 11, pcode: 'N0060022', name: '勞工健康保護規則', type: '法規命令', remoteDate: '2021-12-22', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 12, pcode: 'N0060065', name: '女性勞工母性健康保護實施辦法', type: '法規命令', remoteDate: '2024-05-31', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 13, pcode: 'N0060032', name: '妊娠與分娩後女性及未滿十八歲勞工禁止從事危險性或有害性工作認定標準', type: '行政規則', remoteDate: '2025-11-20', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 14, pcode: 'N0060012', name: '精密作業勞工視機能保護設施標準', type: '法規命令', remoteDate: '2014-03-30', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 15, pcode: 'N0060025', name: '工業用機器人危害預防標準', type: '法規命令', remoteDate: '2018-02-14', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 16, pcode: 'N0060011', name: '鍋爐及壓力容器安全規則', type: '法規命令', remoteDate: '2014-07-01', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 17, pcode: 'J0160009', name: '游離輻射防護法', type: '法律', remoteDate: '2002-01-30', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 18, pcode: 'J0160022', name: '游離輻射防護施行細則', type: '法規命令', remoteDate: '2008-02-22', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 19, pcode: 'J0160004', name: '游離輻射防護安全標準', type: '法規命令', remoteDate: '2005-12-30', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 20, pcode: 'J0160025', name: '放射性物質與可發生游離輻射設備及其輻輻射作業管理辦法', type: '法規命令', remoteDate: '2018-12-22', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 21, pcode: 'J0160042', name: '放射性物質或可發生游離輻射設備操作人員管理辦法', type: '法規命令', remoteDate: '2009-04-17', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 22, pcode: 'N0030011', name: '事業單位僱用女性勞工夜間工作場所必要之安全衛生設施標準', type: '法規命令', remoteDate: '2015-03-31', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 23, pcode: 'N0060034', name: '機械設備器具安全標準', type: '法規命令', remoteDate: '2022-05-11', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 24, pcode: 'N0030001', name: '勞動基準法', type: '法律', remoteDate: '2024-07-31', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 25, pcode: 'N0050031', name: '勞工職業災害保險及保護法', type: '法律', remoteDate: '2021-04-30', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 26, pcode: 'N0050039', name: '勞工職業災害保險及保護法施行細則', type: '法規命令', remoteDate: '2025-05-29', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 27, pcode: 'N0050035', name: '勞工職業災害保險及保護法第十條規定參加保險辦法', type: '法規命令', remoteDate: '2022-03-09', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 28, pcode: 'N0060020', name: '缺氧症預防規則', type: '法規命令', remoteDate: '2014-06-26', localCheckDate: UNIFIED_INITIAL_DATE }
+                            ];
+                            setLaws(defaultLaws);
+                            await saveData('laws', defaultLaws);
+                        }
+
+                        // 處理法規詳情
+                        if (dbDetailsArray.length > 0) {
+                            const detailsObj = {};
+                            dbDetailsArray.forEach(item => {
+                                detailsObj[item.lawId] = { rows: item.rows };
+                            });
+                            setLawDetails(detailsObj);
+                        } else {
+                            const defaultDetails = {
+                                1: { rows: [{ no: '第 4 條', old: '本法適用於各業。但因事業規模、性質及風險程度...', new: '本法適用於各業。但因事業規模、性質及風險程度，經中央主管機關指定公告者，<ins>得分階段適用</ins>。', note: '擴大適用範圍' }, { no: '第 4 條', old: '有下列情事之一者，處新臺幣三萬元以上十五萬元以下罰鍰...', new: '有下列情事之一者，處新臺幣三萬元以上<ins>三十萬元</ins>以下罰鍰...', note: '罰則加重' }] },
+                                4: { rows: [{ no: '第 21 條', old: '雇主對於勞工從事作業，應採取必要之安全設備及措施。', new: '雇主對於勞工從事作業，應採取必要之安全設備及措施，<ins>並應落實自動檢查計畫</ins>。', note: '加強自主管理' }, { no: '第 128-1 條', old: '(新增條文)', new: '<ins>雇主對於高溫環境作業勞工，應提供必要之散熱設備及足夠之飲用水。</ins>', note: '新增熱危害預防' }] },
+                                8: { rows: [{ no: '附表一', old: '甲苯容許濃度：100 ppm', new: '甲苯容許濃度：<ins>50 ppm</ins>', note: '標準趨嚴' }, { no: '附表一', old: '二甲苯容許濃度：100 ppm', new: '二甲苯容許濃度：<ins>80 ppm</ins>', note: '標準趨嚴' }] },
+                                24: { rows: [{ no: '第 32-1 條', old: '雇主依第三十二條第一項及第二項規定使勞工延長工作時間...', new: '雇主依第三十二條第一項及第二項規定使勞工延長工作時間，<ins>應核實記載至分鐘為止</ins>。', note: '工時記載精細化' }] }
+                            };
+                            setLawDetails(defaultDetails);
+                            await saveData('details', defaultDetails);
+                        }
+                        setIsLoaded(true);
+                    } catch (err) {
+                        console.error('Database Init Failed:', err);
+                        setIsLoaded(true);
+                    }
                 };
-            });
+                initData();
+            }, []);
+
+            // 持續保存變更
+            useEffect(() => {
+                if (isLoaded) {
+                    saveData('laws', laws);
+                }
+            }, [laws, isLoaded]);
 
             useEffect(() => {
-                localStorage.setItem('osh_laws_data', JSON.stringify(laws));
-                localStorage.setItem('osh_law_details_data', JSON.stringify(lawDetails));
-                localStorage.setItem('osh_admin_pwd', adminPassword);
-            }, [laws, lawDetails, adminPassword]);
+                if (isLoaded) {
+                    saveData('details', lawDetails);
+                }
+            }, [lawDetails, isLoaded]);
+
+            useEffect(() => {
+                if (isLoaded) {
+                    saveData('config', { key: 'osh_admin_pwd', value: adminPassword });
+                }
+            }, [adminPassword, isLoaded]);
 
             useEffect(() => {
                 const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -276,6 +373,11 @@
             const removeLaw = (id) => {
                 if(confirm('確定要移除此法規監測項目嗎？相關鑑別紀錄也會消失。')) {
                     setLaws(prev => prev.filter(law => law.id !== id));
+                    setLawDetails(prev => {
+                        const next = {...prev};
+                        delete next[id];
+                        return next;
+                    });
                 }
             };
 
@@ -342,7 +444,6 @@
                 XLSX.writeFile(workbook, `職安法規鑑別總表_${now.getFullYear()}_Q${quarter}.xlsx`);
             };
 
-            // 導出數據庫 JSON
             const exportDatabase = () => {
                 const data = {
                     laws: laws,
@@ -358,18 +459,20 @@
                 URL.revokeObjectURL(url);
             };
 
-            // 導入數據庫 JSON
             const importDatabase = (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
 
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = async (e) => {
                     try {
                         const importedData = JSON.parse(e.target.result);
                         if (importedData.laws && importedData.lawDetails) {
                             setLaws(importedData.laws);
                             setLawDetails(importedData.lawDetails);
+                            // 同步寫入 DB
+                            await saveData('laws', importedData.laws);
+                            await saveData('details', importedData.lawDetails);
                             alert('數據庫導入成功！');
                         } else {
                             alert('無效的數據格式，請確認檔案內容。');
@@ -379,7 +482,6 @@
                     }
                 };
                 reader.readAsText(file);
-                // 重置 input 以便下次選擇同一檔案
                 event.target.value = '';
             };
 
@@ -401,6 +503,17 @@
                 if (!selectedLaw) return null;
                 return lawDetails[selectedLaw.id] || { rows: [] };
             }, [selectedLaw, lawDetails]);
+
+            if (!isLoaded) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-slate-900">
+                        <div className="text-white flex flex-col items-center gap-4">
+                            <i className="fas fa-database text-4xl animate-pulse"></i>
+                            <span className="font-bold tracking-widest uppercase">系統初始化中...</span>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="min-h-screen flex flex-col">
@@ -474,7 +587,7 @@
                             </div>
                             <div>
                                 <h1 className="text-2xl font-black text-white leading-tight flex items-center gap-3">職業安全法規鑑別系統</h1>
-                                <div className="text-xs text-slate-400 font-bold uppercase tracking-[0.15em] mt-1.5 opacity-80">OCCUPATIONAL SAFETY REGULATIONS IDENTIFICATION SYSTEM - DEMO MODE</div>
+                                <div className="text-xs text-slate-400 font-bold uppercase tracking-[0.15em] mt-1.5 opacity-80">OCCUPATIONAL SAFETY REGULATIONS IDENTIFICATION SYSTEM - INDEXEDDB MODE</div>
                                 <div className="flex items-center gap-2 text-xs text-emerald-400 font-black uppercase tracking-widest mt-2">
                                     <span className="flex h-2 w-2 relative">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -532,7 +645,6 @@
                                             <p className="text-slate-500 text-base font-medium mt-1">系統正在即時比對全國法規資料庫之最新修訂內容</p>
                                         </div>
                                         <div className="flex flex-col gap-4 items-end">
-                                            {/* 新增導出與導入數據庫按鈕 */}
                                             <div className="flex items-center gap-3">
                                                 <button onClick={exportDatabase} className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-slate-700 transition-all active:scale-95">
                                                     <i className="fas fa-share-nodes"></i> 導出數據庫
