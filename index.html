@@ -675,20 +675,20 @@ const handleSingleSync = (lawId) => {
                             </div>
                             
                             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                                <button onClick={handleAllSync} className="flex items-center justify-center w-full sm:w-40 gap-3 w-40 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg border-b-4 border-emerald-900">
+                                <button onClick={handleAllSync} className="flex items-center justify-center w-full lg:w-40 gap-3 w-40 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg border-b-4 border-emerald-900">
                                     <i className="fas fa-rotate"></i> 智能同步
                                 </button>
                                 
-                                <button onClick={handleExport} className="flex items-center justify-center w-full sm:w-40gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-800 transition-all shadow-lg border-b-4 border-slate-950">
+                                <button onClick={handleExport} className="flex items-center justify-center w-full lg:w-40 gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-800 transition-all shadow-lg border-b-4 border-slate-950">
                                     <i className="fas fa-file-export"></i> 匯出總表
                                 </button>
 
                                 {isAdmin ? (
-                                    <button onClick={handleLogout} className="flex items-center justify-center w-full sm:w-40 gap-3 w-40 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
+                                    <button onClick={handleLogout} className="flex items-center justify-center w-full lg:w-40 gap-3 w-40 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
                                         <i className="fas fa-sign-out-alt"></i> 儲存並登出
                                     </button>
                                 ) : (
-                                    <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="flex items-center justify-center w-full sm:w-40 gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
+                                    <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="flex items-center justify-center w-full lg:w-40 gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
                                         <i className="fas fa-lock"></i> 管理員登入
                                     </button>
                                 )}
