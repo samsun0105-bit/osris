@@ -424,7 +424,7 @@ try {
     const controller = new AbortController();
 
     // 設定30秒後自動中止
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     // 發送請求（帶入 signal）
     const response = await fetch('/api/sync-laws', {
