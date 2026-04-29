@@ -415,57 +415,74 @@
                 });
             };
 
-            const handleAllSync = () => {
-                if (isAdmin) {
-                    setSyncText('請選擇 law_sync_status.json 以進行 Pcode 校對...');
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = '.json';
-                    input.onchange = (e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                            setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
-                            setIsSyncing(true);
-                            setTimeout(() => processSyncFile(file), 5000);
-                        }
-                    };
-                    input.click();
-                } else {
-                    setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
-                    setIsSyncing(true);
-                    finalizeAllSync();
-                }
-            };
+const handleAllSync = async () => {
+    setSyncText('正在連線全國法規資料庫...\n(約需10~20秒，請稍候)');
+    setIsSyncing(true);
 
-            const finalizeAllSync = () => {
-                setTimeout(() => {
-                    const today = new Date().toISOString().split('T')[0];
-                    setLaws(prev => prev.map(law => ({ ...law, localCheckDate: today })));
-                    setIsSyncing(false);
-                }, 5000);
-            };
+try {
+    // 建立控制器（用來中斷請求）
+    const controller = new AbortController();
 
-            const handleSingleSync = (lawId) => {
-                if (isAdmin) {
-                    setSyncText('正在開啟 Pcode 校對權限...');
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = '.json';
-                    input.onchange = (e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                            setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
-                            setIsSyncing(true);
-                            setTimeout(() => processSyncFile(file, lawId), 3000);
-                        }
+    // 設定30秒後自動中止
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    // 發送請求（帶入 signal）
+    const response = await fetch('/api/sync-laws', {
+        signal: controller.signal
+    });
+
+    // 請求完成 → 取消 timeout
+    clearTimeout(timeoutId);
+
+    const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || '法規同步失敗');
+        }
+
+        const syncData = result.data || [];
+
+        setLaws(prevLaws => {
+            return prevLaws.map(law => {
+                const match = syncData.find(item => item.Pcode === law.pcode);
+
+                if (match && match.LastUpdate) {
+                    return {
+                        ...law,
+                        remoteDate: match.LastUpdate
                     };
-                    input.click();
-                } else {
-                    setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
-                    setIsSyncing(true);
-                    finalizeSingleSync(lawId);
                 }
-            };
+
+                return law;
+            });
+        });
+
+        alert(`智能同步完成，共取得 ${result.count} 筆法規資料。`);
+
+} catch (error) {
+    if (error.name === 'AbortError') {
+        alert('同步逾時（30秒），請稍後再試');
+    } else {
+        alert('同步失敗：' + error.message);
+    }
+} finally {
+    setIsSyncing(false);
+}
+};
+
+const handleSingleSync = (lawId) => {
+    const today = new Date().toISOString().split('T')[0];
+
+    setLaws(prev =>
+        prev.map(law =>
+            law.id === lawId
+                ? { ...law, localCheckDate: today }
+                : law
+        )
+    );
+
+    alert('已確認完成鑑別，最近鑑別日已更新為今天。');
+};
 
             const finalizeSingleSync = (lawId) => {
                 setTimeout(() => {
