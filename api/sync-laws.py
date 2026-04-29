@@ -13,8 +13,12 @@ LAW_LIST_PATH = os.path.join(BASE_DIR, "law_list.json")
 def get_law_date(pcode):
     url = f"https://law.moj.gov.tw/Service/GetOneLaw.aspx?PCode={pcode}"
 
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
     try:
-        response = requests.get(url, timeout=30)
+        response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
 
         root = ET.fromstring(response.content)
