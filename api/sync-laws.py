@@ -54,7 +54,7 @@ class handler(BaseHTTPRequestHandler):
                     "LastUpdate": latest
                 })
 
-                time.sleep(0.2)  # 避免過快請求
+                time.sleep(0.1)  # 避免過快請求
 
             # 回傳 JSON
             body = json.dumps({
