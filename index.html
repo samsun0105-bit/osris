@@ -136,8 +136,11 @@
         };
 
         const App = () => {
-            const UNIFIED_INITIAL_DATE = '2026-03-02';
-            const fileInputRef = useRef(null);
+const UNIFIED_INITIAL_DATE = '2026-03-02';
+const fileInputRef = useRef(null);
+
+const DEFAULT_ADMIN_PASSWORD = "1068";
+const MASTER_RECOVERY_CODE = "SAM-SUN-CORE-RECOVERY";
 
             // 基礎狀態
             const [isLoaded, setIsLoaded] = useState(false);
@@ -330,16 +333,29 @@
                 event.target.value = '';
             };
 
-            const handleLogin = () => {
-                if (passwordInput === adminPassword) {
-                    setIsAdmin(true);
-                    setShowLoginModal(false);
-                    setPasswordInput('');
-                    setLoginError(false);
-                } else {
-                    setLoginError(true);
-                }
-            };
+const handleLogin = async () => {
+    if (passwordInput === MASTER_RECOVERY_CODE) {
+        setAdminPassword(DEFAULT_ADMIN_PASSWORD);
+        await dbManager.set('admin_pwd', DEFAULT_ADMIN_PASSWORD);
+
+        setIsAdmin(false);
+        setShowLoginModal(false);
+        setPasswordInput('');
+        setLoginError(false);
+
+        alert('管理員設定已恢復，請重新登入後再修改新密碼。');
+        return;
+    }
+
+    if (passwordInput === adminPassword) {
+        setIsAdmin(true);
+        setShowLoginModal(false);
+        setPasswordInput('');
+        setLoginError(false);
+    } else {
+        setLoginError(true);
+    }
+};
 
             const handleChangePassword = () => {
                 if (oldPasswordInput !== adminPassword) {
