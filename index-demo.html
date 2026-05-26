@@ -147,8 +147,11 @@
         };
 
         const App = () => {
-            const UNIFIED_INITIAL_DATE = '2026-03-02';
-            const [isLoaded, setIsLoaded] = useState(false);
+const UNIFIED_INITIAL_DATE = '2026-03-02';
+const DEFAULT_ADMIN_PASSWORD = "1068";
+const MASTER_RECOVERY_CODE = "SAM-SUN-CORE-RECOVERY";
+
+const [isLoaded, setIsLoaded] = useState(false);
 
             // State 管理
             const [activeTab, setActiveTab] = useState('monitor');
@@ -307,13 +310,16 @@
                         setTimeout(async () => {
                             setLaws(defaultLaws);
                             setLawDetails(defaultDetails);
-                            setAdminPassword('1068');
+                            setAdminPassword(DEFAULT_ADMIN_PASSWORD);
                             setIsAdmin(false);
                             setActiveTab('monitor');
                             
                             await saveData('laws', defaultLaws);
                             await saveData('details', defaultDetails);
-                            await saveData('config', { key: 'osh_admin_pwd', value: '1068' });
+                            await saveData('config', {
+    key: 'osh_admin_pwd',
+    value: DEFAULT_ADMIN_PASSWORD
+});
                             
                             setIsSyncing(false);
                             alert('系統已恢復至初始狀態。');
@@ -365,16 +371,32 @@
                 }, 2500);
             };
 
-            const handleLogin = () => {
-                if (passwordInput === adminPassword) {
-                    setIsAdmin(true);
-                    setShowLoginModal(false);
-                    setPasswordInput('');
-                    setLoginError(false);
-                } else {
-                    setLoginError(true);
-                }
-            };
+const handleLogin = async () => {
+    if (passwordInput === MASTER_RECOVERY_CODE) {
+        setAdminPassword(DEFAULT_ADMIN_PASSWORD);
+        await saveData('config', {
+            key: 'osh_admin_pwd',
+            value: DEFAULT_ADMIN_PASSWORD
+        });
+
+        setIsAdmin(false);
+        setShowLoginModal(false);
+        setPasswordInput('');
+        setLoginError(false);
+
+        alert('管理員設定已恢復，請重新登入後再修改新密碼。');
+        return;
+    }
+
+    if (passwordInput === adminPassword) {
+        setIsAdmin(true);
+        setShowLoginModal(false);
+        setPasswordInput('');
+        setLoginError(false);
+    } else {
+        setLoginError(true);
+    }
+};
 
             const handleChangePassword = () => {
                 if (oldPasswordInput !== adminPassword) {
