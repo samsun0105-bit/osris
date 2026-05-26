@@ -311,7 +311,7 @@ useEffect(() => {
             const exportDatabase = () => {
                 const dataStr = JSON.stringify({ laws, lawDetails }, null, 2);
                 const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                const exportFileDefaultName = `OSH_Regulation_DB_${new Date().toISOString().split('T')[0]}.json`;
+                const exportFileDefaultName = `職業安全法規鑑別系統_OSRIS_${new Date().toISOString().split('T')[0]}.json`;
                 const linkElement = document.createElement('a');
                 linkElement.setAttribute('href', dataUri);
                 linkElement.setAttribute('download', exportFileDefaultName);
