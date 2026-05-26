@@ -273,10 +273,19 @@ const [isLoaded, setIsLoaded] = useState(false);
                 }
             }, [adminPassword, isLoaded]);
 
-            useEffect(() => {
-                const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-                return () => clearInterval(timer);
-            }, []);
+useEffect(() => {
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+            setShowLoginModal(false);
+        }
+    };
+
+    document.addEventListener('keydown', handleEsc);
+
+    return () => {
+        document.removeEventListener('keydown', handleEsc);
+    };
+}, []);
 
             const formatTime = (date) => {
                 const y = date.getFullYear();
@@ -572,8 +581,14 @@ const handleLogin = async () => {
             return (
                 <div className="min-h-screen flex flex-col">
                     {showLoginModal && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
-                            <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-200 fade-in">
+                        <div 
+    className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4"
+    onClick={() => setShowLoginModal(false)}
+>
+                            <div 
+    className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-200 fade-in"
+    onClick={(e) => e.stopPropagation()}
+>
                                 {authMode === 'login' ? (
                                     <>
                                         <div className="text-center mb-8">
