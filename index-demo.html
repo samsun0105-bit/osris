@@ -518,7 +518,7 @@ const handleLogin = async () => {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `osh_database_backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.download = `職業安全法規鑑別系統_OSRIS_${new Date().toISOString().split('T')[0]}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
             };
