@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap');
@@ -528,27 +528,271 @@ const handleAdminSyncIdentification = () => {
                 }, 3000);
             };
 
-            const handleExport = () => {
-                const now = new Date();
-                const quarter = Math.ceil((now.getMonth() + 1) / 3);
-                const exportData = laws.map((law, index) => {
-                    const isDiff = checkLawDiff(law.remoteDate, law.localCheckDate);
-                    return {
-                        "序號": index + 1,
-                        "Pcode": law.pcode,
-                        "法規名稱": law.name,
-                        "法規類別": law.type,
-                        "鑑別季度": `${now.getFullYear()} Q${quarter}`,
-                        "全國法規資料庫日期": law.remoteDate,
-                        "最近鑑別/登錄日": law.localCheckDate,
-                        "合規狀態": isDiff ? "鑑別異常" : "鑑別完成"
-                    };
-                });
-                const worksheet = XLSX.utils.json_to_sheet(exportData);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "法規鑑別總表");
-                XLSX.writeFile(workbook, `職安法規鑑別總表_${now.getFullYear()}_Q${quarter}.xlsx`);
-            };
+const handleExport = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const quarter = Math.ceil((now.getMonth() + 1) / 3);
+    const exportDate = now.toISOString().split('T')[0];
+
+    const totalCount = laws.length;
+    const abnormalCount = laws.filter(law => checkLawDiff(law.remoteDate, law.localCheckDate)).length;
+    const completedCount = totalCount - abnormalCount;
+    const abnormalRate = totalCount > 0 ? `${Math.round((abnormalCount / totalCount) * 100)}%` : '0%';
+
+    const reportRows = laws.map((law, index) => {
+        const isDiff = checkLawDiff(law.remoteDate, law.localCheckDate);
+
+        return [
+            index + 1,
+            law.pcode,
+            law.name,
+            law.type,
+            `${year} Q${quarter}`,
+            law.remoteDate,
+            law.localCheckDate,
+            isDiff ? '鑑別異常' : '鑑別完成'
+        ];
+    });
+
+    const aoa = [
+        ['職業安全法規鑑別總表'],
+        [`報表季度：${year} Q${quarter}`, '', '', '', `匯出日期：${exportDate}`, '', '', ''],
+        [],
+        ['管理摘要', '', '', '', '', '', '', ''],
+        ['監控法規總數', totalCount, '鑑別完成', completedCount, '鑑別異常', abnormalCount, '異常比例', abnormalRate],
+        [],
+        ['序號', 'Pcode', '法規名稱', '法規類別', '鑑別季度', '全國法規資料庫日期', '最近鑑別/登錄日', '合規狀態'],
+        ...reportRows
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+
+    worksheet['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+        { s: { r: 3, c: 0 }, e: { r: 3, c: 7 } }
+    ];
+
+    worksheet['!cols'] = [
+        { wch: 8 },
+        { wch: 14 },
+        { wch: 42 },
+        { wch: 14 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 14 }
+    ];
+
+    worksheet['!rows'] = [
+        { hpt: 34 },
+        { hpt: 22 },
+        { hpt: 8 },
+        { hpt: 24 },
+        { hpt: 24 },
+        { hpt: 8 },
+        { hpt: 26 }
+    ];
+
+    worksheet['!autofilter'] = {
+        ref: `A7:H${7 + reportRows.length}`
+    };
+
+    const range = XLSX.utils.decode_range(worksheet['!ref']);
+
+    const borderStyle = {
+        top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+        bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+        left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+        right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+    };
+
+    const titleStyle = {
+        font: {
+            name: 'Microsoft JhengHei',
+            bold: true,
+            sz: 18,
+            color: { rgb: 'FFFFFF' }
+        },
+        fill: { fgColor: { rgb: '0F172A' } },
+        alignment: {
+            horizontal: 'center',
+            vertical: 'center'
+        }
+    };
+
+    const metaStyle = {
+        font: {
+            name: 'Microsoft JhengHei',
+            bold: true,
+            sz: 11,
+            color: { rgb: '334155' }
+        },
+        fill: { fgColor: { rgb: 'E2E8F0' } },
+        alignment: {
+            vertical: 'center'
+        }
+    };
+
+    const sectionStyle = {
+        font: {
+            name: 'Microsoft JhengHei',
+            bold: true,
+            sz: 12,
+            color: { rgb: 'FFFFFF' }
+        },
+        fill: { fgColor: { rgb: '1E40AF' } },
+        alignment: {
+            horizontal: 'left',
+            vertical: 'center'
+        }
+    };
+
+    const summaryLabelStyle = {
+        font: {
+            name: 'Microsoft JhengHei',
+            bold: true,
+            sz: 10,
+            color: { rgb: '475569' }
+        },
+        fill: { fgColor: { rgb: 'F8FAFC' } },
+        border: borderStyle,
+        alignment: {
+            horizontal: 'center',
+            vertical: 'center'
+        }
+    };
+
+    const summaryValueStyle = {
+        font: {
+            name: 'Microsoft JhengHei',
+            bold: true,
+            sz: 11,
+            color: { rgb: '0F172A' }
+        },
+        fill: { fgColor: { rgb: 'FFFFFF' } },
+        border: borderStyle,
+        alignment: {
+            horizontal: 'center',
+            vertical: 'center'
+        }
+    };
+
+    const headerStyle = {
+        font: {
+            name: 'Microsoft JhengHei',
+            bold: true,
+            sz: 10,
+            color: { rgb: 'FFFFFF' }
+        },
+        fill: { fgColor: { rgb: '334155' } },
+        border: borderStyle,
+        alignment: {
+            horizontal: 'center',
+            vertical: 'center',
+            wrapText: true
+        }
+    };
+
+    const normalCellStyle = {
+        font: {
+            name: 'Microsoft JhengHei',
+            sz: 10,
+            color: { rgb: '334155' }
+        },
+        border: borderStyle,
+        alignment: {
+            vertical: 'center',
+            wrapText: true
+        }
+    };
+
+    const centerCellStyle = {
+        ...normalCellStyle,
+        alignment: {
+            horizontal: 'center',
+            vertical: 'center',
+            wrapText: true
+        }
+    };
+
+    const completedStyle = {
+        font: {
+            name: 'Microsoft JhengHei',
+            bold: true,
+            sz: 10,
+            color: { rgb: '047857' }
+        },
+        fill: { fgColor: { rgb: 'D1FAE5' } },
+        border: borderStyle,
+        alignment: {
+            horizontal: 'center',
+            vertical: 'center'
+        }
+    };
+
+    const abnormalStyle = {
+        font: {
+            name: 'Microsoft JhengHei',
+            bold: true,
+            sz: 10,
+            color: { rgb: 'BE123C' }
+        },
+        fill: { fgColor: { rgb: 'FFE4E6' } },
+        border: borderStyle,
+        alignment: {
+            horizontal: 'center',
+            vertical: 'center'
+        }
+    };
+
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!worksheet[cellAddress]) continue;
+
+            if (R === 0) {
+                worksheet[cellAddress].s = titleStyle;
+            } else if (R === 1) {
+                worksheet[cellAddress].s = metaStyle;
+            } else if (R === 3) {
+                worksheet[cellAddress].s = sectionStyle;
+            } else if (R === 4) {
+                worksheet[cellAddress].s = C % 2 === 0 ? summaryLabelStyle : summaryValueStyle;
+            } else if (R === 6) {
+                worksheet[cellAddress].s = headerStyle;
+            } else if (R >= 7) {
+                if (C === 0 || C === 1 || C === 3 || C === 4 || C === 5 || C === 6) {
+                    worksheet[cellAddress].s = centerCellStyle;
+                } else if (C === 7) {
+                    const status = worksheet[cellAddress].v;
+                    worksheet[cellAddress].s = status === '鑑別異常' ? abnormalStyle : completedStyle;
+                } else {
+                    worksheet[cellAddress].s = normalCellStyle;
+                }
+            }
+        }
+    }
+
+    for (let i = 7; i <= 7 + reportRows.length; i++) {
+        if (!worksheet['!rows'][i]) worksheet['!rows'][i] = {};
+        worksheet['!rows'][i].hpt = 24;
+    }
+
+    worksheet['A1'].s = titleStyle;
+
+    const workbook = XLSX.utils.book_new();
+
+    workbook.Props = {
+        Title: '職業安全法規鑑別總表',
+        Subject: `${year} Q${quarter} 法規鑑別報表`,
+        Author: '職業安全法規鑑別系統',
+        CreatedDate: now
+    };
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, '法規鑑別總表');
+
+    XLSX.writeFile(workbook, `職安法規鑑別總表_${year}_Q${quarter}_${exportDate}.xlsx`);
+};
 
             const filteredLaws = useMemo(() => {
                 return laws.filter(law => (filterType === '全部' || law.type === filterType) && (law.name.includes(searchQuery) || law.pcode.includes(searchQuery)));
