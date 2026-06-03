@@ -495,18 +495,29 @@ try {
 }
 };
 
-const handleSingleSync = (lawId) => {
+const handleAdminSyncIdentification = () => {
+    if (!isAdmin) return;
+
     const today = new Date().toISOString().split('T')[0];
 
+    if (!confirm(`確定要將所有法規的「最近鑑別/登錄日」同步為今天：${today} 嗎？`)) {
+        return;
+    }
+
     setLaws(prev =>
-        prev.map(law =>
-            law.id === lawId
-                ? { ...law, localCheckDate: today }
-                : law
-        )
+        prev.map(law => ({
+            ...law,
+            localCheckDate: today
+        }))
     );
 
-    alert('已確認完成鑑別，最近鑑別日已更新為今天。');
+    setSelectedLaw(prev =>
+        prev
+            ? { ...prev, localCheckDate: today }
+            : prev
+    );
+
+    alert(`同步鑑別完成！所有法規的最近鑑別/登錄日已更新為 ${today}。`);
 };
 
             const finalizeSingleSync = (lawId) => {
@@ -750,27 +761,39 @@ const handleSingleSync = (lawId) => {
                                             <p className="text-slate-500 text-base font-medium mt-1">系統正在即時比對全國法規資料庫之最新修訂內容</p>
                                         </div>
                                         <div className="flex flex-col gap-4 items-end">
-                                            <div className="flex items-center gap-3 db-controls">
-                                                <input 
-                                                    type="file" 
-                                                    accept=".json" 
-                                                    onChange={importDatabase} 
-                                                    className="hidden" 
-                                                    ref={fileInputRef} 
-                                                />
-                                                <button 
-                                                    onClick={exportDatabase}
-                                                    className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-2"
-                                                >
-                                                    <i className="fas fa-share-nodes"></i> 導出數據
-                                                </button>
-                                                <button 
-                                                    onClick={() => fileInputRef.current.click()}
-                                                    className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-2"
-                                                >
-                                                    <i className="fas fa-file-import"></i> 導入數據
-                                                </button>
-                                            </div>
+<div className="flex items-center gap-3 db-controls">
+    <input 
+        type="file" 
+        accept=".json" 
+        onChange={importDatabase} 
+        className="hidden" 
+        ref={fileInputRef} 
+    />
+
+    {isAdmin && (
+        <button 
+            onClick={handleAdminSyncIdentification}
+            title="同步鑑別"
+            className="w-10 h-10 bg-blue-600 text-white rounded-xl text-sm font-black hover:bg-blue-700 transition-all shadow-md flex items-center justify-center"
+        >
+            <i className="fas fa-arrows-rotate"></i>
+        </button>
+    )}
+
+    <button 
+        onClick={exportDatabase}
+        className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-2"
+    >
+        <i className="fas fa-share-nodes"></i> 導出數據
+    </button>
+
+    <button 
+        onClick={() => fileInputRef.current.click()}
+        className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-2"
+    >
+        <i className="fas fa-file-import"></i> 導入數據
+    </button>
+</div>
 
                                             <div className="flex items-center gap-4">
                                                 <div className="hidden md:flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
