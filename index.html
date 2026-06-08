@@ -69,6 +69,56 @@
             background: rgba(59, 130, 246, 0.05);
         }
 
+        /* 手機版專用：只在 640px 以下生效，不影響桌機 */
+        @media screen and (max-width: 640px) {
+            body {
+                background-color: #f1f5f9;
+            }
+
+            .mobile-hide {
+                display: none !important;
+            }
+
+            .main-container {
+                padding: 14px !important;
+            }
+
+            .law-card-glow {
+                border-radius: 1.25rem !important;
+            }
+
+            .law-card-glow:hover {
+                transform: none;
+            }
+
+            .mobile-card-tight {
+                padding: 14px !important;
+                gap: 12px !important;
+            }
+
+            .mobile-section-tight {
+                padding: 16px !important;
+            }
+
+            .mobile-workbench-tight {
+                border-radius: 1.5rem !important;
+                box-shadow: 0 8px 20px rgb(15 23 42 / 0.08) !important;
+            }
+
+            .mobile-scroll-table {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .mobile-scroll-table table {
+                min-width: 720px;
+            }
+
+            .mobile-footer-tight {
+                padding: 18px 14px !important;
+            }
+        }
+
         @media print {
             header, footer, .back-nav-btn, .action-buttons, .sidebar-mock, .time-display-box, .admin-controls, .row-action-btn, .db-controls {
                 display: none !important;
@@ -931,16 +981,16 @@ const handleExport = () => {
                         </div>
                     )}
 
-                    <header className="bg-slate-900 border-b border-slate-800 px-10 py-6 flex justify-between items-center sticky top-0 z-40 shadow-xl">
-                        <div className="flex items-center gap-6">
-                            <div className="bg-blue-600 w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-                                <i className="fas fa-shield-halved text-3xl"></i>
+                    <header className="bg-slate-900 border-b border-slate-800 px-4 py-4 sm:px-10 sm:py-6 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 sm:gap-0 sticky top-0 z-40 shadow-xl">
+                        <div className="flex items-center gap-3 sm:gap-6">
+                            <div className="bg-blue-600 w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30 shrink-0">
+                                <i className="fas fa-shield-halved text-2xl sm:text-3xl"></i>
                             </div>
                             <div>
-                                <h1 className="text-2xl font-black text-white leading-tight flex items-center gap-3">
+                                <h1 className="text-xl sm:text-2xl font-black text-white leading-tight flex items-center gap-3">
                                     職業安全法規鑑別系統
                                 </h1>
-                                <div className="text-xs text-slate-400 font-bold uppercase tracking-[0.15em] mt-1.5 opacity-80">
+                                <div className="mobile-hide sm:block text-xs text-slate-400 font-bold uppercase tracking-[0.15em] mt-1.5 opacity-80">
                                     OCCUPATIONAL SAFETY REGULATIONS IDENTIFICATION SYSTEM
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-emerald-400 font-black uppercase tracking-widest mt-2">
@@ -953,28 +1003,28 @@ const handleExport = () => {
                             </div>
                         </div>
 
-                        <div className="flex flex-col items-end gap-3">
-                            <div className="time-display-box">
+                        <div className="flex flex-col items-stretch sm:items-end gap-3">
+                            <div className="time-display-box mobile-hide sm:block">
                                 <span className="text-slate-400 font-black text-xs tracking-widest tabular-nums opacity-90">
                                     {formatTime(currentTime)}
                                 </span>
                             </div>
                             
-                            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                                <button onClick={handleAllSync} className="flex items-center justify-center w-full lg:w-40 gap-3 w-40 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg border-b-4 border-emerald-900">
+                            <div className="grid grid-cols-3 sm:flex sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+                                <button onClick={handleAllSync} className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-emerald-600 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-emerald-700 transition-all shadow-lg border-b-4 border-emerald-900">
                                     <i className="fas fa-rotate"></i> 智能同步
                                 </button>
                                 
-                                <button onClick={handleExport} className="flex items-center justify-center w-full lg:w-40 gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-800 transition-all shadow-lg border-b-4 border-slate-950">
+                                <button onClick={handleExport} className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-slate-700 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-slate-800 transition-all shadow-lg border-b-4 border-slate-950">
                                     <i className="fas fa-file-export"></i> 匯出總表
                                 </button>
 
                                 {isAdmin ? (
-                                    <button onClick={handleLogout} className="flex items-center justify-center w-full lg:w-40 gap-3 w-40 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
+                                    <button onClick={handleLogout} className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-rose-600 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
                                         <i className="fas fa-sign-out-alt"></i> 儲存並登出
                                     </button>
                                 ) : (
-                                    <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="flex items-center justify-center w-full lg:w-40 gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
+                                    <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-slate-700 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
                                         <i className="fas fa-lock"></i> 管理員登入
                                     </button>
                                 )}
@@ -995,17 +1045,17 @@ const handleExport = () => {
                         </div>
                     )}
 
-                    <main className="flex-1 p-8 md:p-12 overflow-y-auto main-container">
+                    <main className="flex-1 p-4 sm:p-8 md:p-12 overflow-y-auto main-container">
                         <div className="max-w-6xl mx-auto">
                             {activeTab === 'monitor' ? (
-                                <div className="fade-in space-y-8">
-                                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                                <div className="fade-in space-y-4 sm:space-y-8">
+                                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
                                         <div>
-                                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">法規動態監測</h2>
-                                            <p className="text-slate-500 text-base font-medium mt-1">系統正在即時比對全國法規資料庫之最新修訂內容</p>
+                                            <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">法規動態監測</h2>
+                                            <p className="text-slate-500 text-sm sm:text-base font-medium mt-1">系統正在即時比對全國法規資料庫之最新修訂內容</p>
                                         </div>
-                                        <div className="flex flex-col gap-4 items-end">
-<div className="flex items-center gap-3 db-controls">
+                                        <div className="flex flex-col gap-3 sm:gap-4 items-stretch sm:items-end">
+<div className="flex items-center justify-end gap-2 sm:gap-3 db-controls">
     <input 
         type="file" 
         accept=".json" 
@@ -1026,20 +1076,20 @@ const handleExport = () => {
 
     <button 
         onClick={exportDatabase}
-        className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-2"
+        className="px-3 sm:px-5 py-2 sm:py-2.5 bg-slate-800 text-white rounded-xl text-[11px] sm:text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-1.5 sm:gap-2"
     >
         <i className="fas fa-share-nodes"></i> 導出數據
     </button>
 
     <button 
         onClick={() => fileInputRef.current.click()}
-        className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-2"
+        className="px-3 sm:px-5 py-2 sm:py-2.5 bg-slate-800 text-white rounded-xl text-[11px] sm:text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-1.5 sm:gap-2"
     >
         <i className="fas fa-file-import"></i> 導入數據
     </button>
 </div>
 
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
                                                 <div className="hidden md:flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
                                                     {['全部', '法律', '法規命令', '行政規則'].map(type => (
                                                         <button
@@ -1051,12 +1101,12 @@ const handleExport = () => {
                                                         </button>
                                                     ))}
                                                 </div>
-                                                <div className="relative">
+                                                <div className="relative w-full sm:w-auto">
                                                     <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
                                                     <input 
                                                         type="text" 
                                                         placeholder="快速搜尋法規名稱或 Pcode..." 
-                                                        className="pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl text-base w-full md:w-80 focus:ring-4 focus:ring-blue-500/10 outline-none shadow-sm transition-all"
+                                                        className="pl-12 sm:pl-14 pr-4 sm:pr-6 py-3 sm:py-4 bg-white border border-slate-200 rounded-2xl text-sm sm:text-base w-full md:w-80 focus:ring-4 focus:ring-blue-500/10 outline-none shadow-sm transition-all"
                                                         value={searchQuery}
                                                         onChange={(e) => setSearchQuery(e.target.value)}
                                                     />
@@ -1070,11 +1120,11 @@ const handleExport = () => {
                                             const isLawDiff = checkLawDiff(law.remoteDate, law.localCheckDate);
                                             
                                             return (
-                                                <div key={law.id} className="p-6 rounded-3xl transition-all flex flex-col lg:flex-row lg:items-center justify-between law-card-glow gap-8 relative group">
-                                                    <div className="flex gap-6 items-center flex-1">
+                                                <div key={law.id} className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl transition-all flex flex-col lg:flex-row lg:items-center justify-between law-card-glow gap-4 sm:gap-8 relative group mobile-card-tight">
+                                                    <div className="flex gap-3 sm:gap-6 items-start sm:items-center flex-1">
                                                         <div className="relative shrink-0 flex flex-col items-center gap-2">
-                                                            <div className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center shadow-lg bg-orange-400 text-white">
-                                                                <span className="text-sm font-black tracking-tight">{index + 1}</span>
+                                                            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center shadow-lg bg-orange-400 text-white">
+                                                                <span className="text-xs sm:text-sm font-black tracking-tight">{index + 1}</span>
                                                             </div>
                                                             {isAdmin && (
                                                                 <div className="flex flex-col gap-1">
@@ -1117,7 +1167,7 @@ const handleExport = () => {
                                                                     </div>
                                                                 ) : (
                                                                     <div>
-                                                                        <h3 className="font-black text-slate-800 truncate text-xl">{law.name}</h3>
+                                                                        <h3 className="font-black text-slate-800 text-base sm:text-xl leading-snug line-clamp-2">{law.name}</h3>
                                                                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pcode : {law.pcode}</span>
                                                                     </div>
                                                                 )}
@@ -1139,8 +1189,8 @@ const handleExport = () => {
                                                                 {isLawDiff && <span className="new-badge text-[10px] font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-lg border border-rose-200">法規已異動</span>}
                                                             </div>
 
-                                                            <div className="flex flex-wrap items-center gap-y-3">
-                                                                <div className="flex flex-col min-w-[140px]">
+                                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                                                                <div className="flex flex-col min-w-[120px] sm:min-w-[140px]">
                                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">全國法規公佈日</span>
                                                                     {isAdmin ? (
                                                                         <input 
@@ -1154,7 +1204,7 @@ const handleExport = () => {
                                                                     )}
                                                                 </div>
                                                                 <div className="w-px h-8 bg-slate-200 mx-6 hidden sm:block"></div>
-                                                                <div className="flex flex-col min-w-[140px]">
+                                                                <div className="flex flex-col min-w-[120px] sm:min-w-[140px]">
                                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">最近鑑別/登錄日</span>
                                                                     {isAdmin ? (
                                                                         <input 
@@ -1170,14 +1220,14 @@ const handleExport = () => {
                                                                     )}
                                                                 </div>
                                                                 
-                                                                <div className="ml-6 flex items-center gap-2">
-                                                                    <span className={`text-[11px] font-black px-4 py-1.5 rounded-lg shadow-sm transition-all ${!isLawDiff ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                                                <div className="w-full sm:w-auto sm:ml-6 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                                                    <span className={`text-[10px] sm:text-[11px] font-black px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg shadow-sm transition-all ${!isLawDiff ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                                                                         鑑別完成
                                                                     </span>
-                                                                    <span className={`text-[11px] font-black px-4 py-1.5 rounded-lg shadow-sm transition-all ${isLawDiff ? 'bg-rose-600 text-white animate-pulse' : 'bg-slate-100 text-slate-400'}`}>
+                                                                    <span className={`text-[10px] sm:text-[11px] font-black px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg shadow-sm transition-all ${isLawDiff ? 'bg-rose-600 text-white animate-pulse' : 'bg-slate-100 text-slate-400'}`}>
                                                                         鑑別異常
                                                                     </span>
-                                                                    <span className={`text-[11px] font-black px-4 py-1.5 rounded-lg shadow-sm transition-all ${isLawDiff ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                                                    <span className={`text-[10px] sm:text-[11px] font-black px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg shadow-sm transition-all ${isLawDiff ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
                                                                         法規變動
                                                                     </span>
                                                                 </div>
@@ -1185,11 +1235,11 @@ const handleExport = () => {
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center gap-4 shrink-0 ml-20 lg:ml-0">
+                                                    <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:gap-4 shrink-0 ml-0 lg:ml-0">
                                                         {isAdmin && (
                                                             <button 
                                                                 onClick={() => removeLaw(law.id)}
-                                                                className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                                                                className="w-full sm:w-12 h-11 sm:h-12 rounded-xl sm:rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
                                                                 title="移除此法規"
                                                             >
                                                                 <i className="fas fa-trash-alt"></i>
@@ -1197,13 +1247,13 @@ const handleExport = () => {
                                                         )}
                                                         <button 
                                                             onClick={() => startSync(law)} 
-                                                            className={`px-6 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 ${isLawDiff ? 'bg-rose-600 text-white shadow-xl shadow-rose-600/30 hover:bg-rose-700 animate-pulse border-none' : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'}`}
+                                                            className={`px-3 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${isLawDiff ? 'bg-rose-600 text-white shadow-xl shadow-rose-600/30 hover:bg-rose-700 animate-pulse border-none' : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'}`}
                                                         >
                                                             比對詳情
                                                         </button>
                                                         <button
                                                             onClick={() => handleSingleSync(law.id)}
-                                                            className={`px-10 py-4 rounded-2xl font-black text-sm text-white shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ${isLawDiff ? 'bg-slate-300 shadow-none cursor-default text-slate-500' : 'bg-blue-600 shadow-blue-600/30 hover:bg-blue-700'}`}
+                                                            className={`px-3 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm text-white shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ${isLawDiff ? 'bg-slate-300 shadow-none cursor-default text-slate-500' : 'bg-blue-600 shadow-blue-600/30 hover:bg-blue-700'}`}
                                                             disabled={isLawDiff}
                                                         >
                                                             立即鑑別
@@ -1224,20 +1274,20 @@ const handleExport = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="fade-in space-y-8">
+                                <div className="fade-in space-y-4 sm:space-y-8">
                                     <button onClick={() => setActiveTab('monitor')} className="back-nav-btn flex items-center gap-3 text-base font-black text-slate-500 hover:text-blue-600 transition-all group">
                                         <i className="fas fa-chevron-left transition-transform group-hover:-translate-x-1"></i> 返回監控清單
                                     </button>
                                     
-                                    <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden workbench-card">
-                                        <div className="p-12 border-b border-slate-100 bg-slate-50/50">
+                                    <div className="bg-white rounded-3xl sm:rounded-[3rem] shadow-xl sm:shadow-2xl border border-slate-200 overflow-hidden workbench-card mobile-workbench-tight">
+                                        <div className="p-4 sm:p-12 border-b border-slate-100 bg-slate-50/50 mobile-section-tight">
                                             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
                                                 <div className="space-y-5">
                                                     <div className="inline-flex items-center gap-2.5 bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full text-[11px] font-black uppercase">
                                                         <i className="fas fa-microchip"></i> 鑑別工作台
                                                     </div>
-                                                    <h2 className="text-4xl font-black text-slate-800 tracking-tight leading-tight">{selectedLaw?.name}</h2>
-                                                    <div className="flex gap-6">
+                                                    <h2 className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tight leading-tight">{selectedLaw?.name}</h2>
+                                                    <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-6">
                                                         <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
                                                             <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1">最新公佈日</span>
                                                             <span className={`text-sm font-black ${checkLawDiff(selectedLaw?.remoteDate, selectedLaw?.localCheckDate) ? 'text-rose-600' : 'text-slate-700'}`}>
@@ -1250,8 +1300,8 @@ const handleExport = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex gap-4 action-buttons">
-                                                    <button onClick={() => window.print()} className="px-8 py-4 rounded-2xl bg-white border border-slate-200 text-slate-600 font-black text-base transition-all hover:bg-slate-50 active:scale-95">
+                                                <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-4 action-buttons w-full sm:w-auto">
+                                                    <button onClick={() => window.print()} className="px-3 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-slate-200 text-slate-600 font-black text-xs sm:text-base transition-all hover:bg-slate-50 active:scale-95">
                                                         <i className="fas fa-print mr-2"></i> 列印報告
                                                     </button>
                                                     <button
@@ -1260,7 +1310,7 @@ const handleExport = () => {
                                                             handleSingleSync(selectedLaw.id);
                                                             setActiveTab('monitor');
                                                         }}
-                                                        className="px-8 py-4 rounded-2xl bg-blue-600 text-white font-black text-base shadow-xl hover:bg-blue-700 transition-all active:scale-95"
+                                                        className="px-3 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-blue-600 text-white font-black text-xs sm:text-base shadow-xl hover:bg-blue-700 transition-all active:scale-95"
                                                     >
                                                         確認鑑別並更新日期
                                                     </button>
@@ -1268,10 +1318,10 @@ const handleExport = () => {
                                             </div>
                                         </div>
                                         
-                                        <div className="p-12 space-y-12 bg-white">
-                                            <div className="flex items-center gap-6 p-8 bg-emerald-50 border border-emerald-100 rounded-3xl">
-                                                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-inner">
-                                                    <i className="fas fa-check-circle text-3xl"></i>
+                                        <div className="p-4 sm:p-12 space-y-4 sm:space-y-12 bg-white mobile-section-tight">
+                                            <div className="flex items-start sm:items-center gap-3 sm:gap-6 p-4 sm:p-8 bg-emerald-50 border border-emerald-100 rounded-2xl sm:rounded-3xl">
+                                                <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-inner">
+                                                    <i className="fas fa-check-circle text-xl sm:text-3xl"></i>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <h4 className="text-lg font-black text-emerald-900">自動比對完成</h4>
@@ -1279,7 +1329,7 @@ const handleExport = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="overflow-hidden border border-slate-200 rounded-3xl shadow-sm">
+                                            <div className="overflow-hidden border border-slate-200 rounded-2xl sm:rounded-3xl shadow-sm mobile-scroll-table">
                                                 <table className="w-full text-left border-collapse">
                                                     <thead>
                                                         <tr className="bg-slate-50 border-b border-slate-200">
@@ -1363,7 +1413,7 @@ const handleExport = () => {
                         </div>
                     </main>
 
-                    <footer className="bg-slate-900 border-t border-slate-800 px-10 py-8 text-center space-y-4">
+                    <footer className="bg-slate-900 border-t border-slate-800 px-4 py-5 sm:px-10 sm:py-8 text-center space-y-3 sm:space-y-4 mobile-footer-tight">
                         <div className="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-8">
                             <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">
                                 © 2026 職業安全衛生室｜法規智慧鑑別系統
@@ -1376,7 +1426,7 @@ const handleExport = () => {
                                 </span>
                             </div>
                         </div>
-                        <div className="text-[9px] text-slate-600 font-bold tracking-[0.3em] uppercase opacity-50">
+                        <div className="mobile-hide sm:block text-[9px] text-slate-600 font-bold tracking-[0.3em] uppercase opacity-50">
                             Enterprise Compliance Intelligence Engine
                         </div>
                     </footer>
