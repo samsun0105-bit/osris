@@ -69,6 +69,10 @@
             background: rgba(59, 130, 246, 0.05);
         }
 
+.mobile-compare-card-list {
+    display: none;
+}
+
         /* 手機版專用：只在 640px 以下生效，不影響桌機 */
         @media screen and (max-width: 640px) {
             body {
@@ -117,6 +121,61 @@
             .mobile-footer-tight {
                 padding: 18px 14px !important;
             }
+
+.mobile-compare-card-list {
+    display: block !important;
+}
+
+.desktop-compare-table {
+    display: none !important;
+}
+
+.mobile-compare-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.25rem;
+    padding: 14px;
+    box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+}
+
+.mobile-compare-content {
+    max-height: none !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.7;
+}
+
+.mobile-compare-old {
+    color: #94a3b8;
+    background: #f8fafc;
+    border-left: 4px solid #cbd5e1;
+    text-decoration: line-through;
+    font-size: 13px;
+    padding: 10px;
+    border-radius: 0.75rem;
+}
+
+.mobile-compare-new {
+    color: #1e293b;
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px;
+    border-radius: 0.75rem;
+}
+
+.mobile-compare-card textarea {
+    min-height: 120px;
+    resize: vertical;
+    overflow: auto;
+    line-height: 1.7;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
         }
 
         @media print {
@@ -1329,8 +1388,8 @@ const handleExport = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="overflow-hidden border border-slate-200 rounded-2xl sm:rounded-3xl shadow-sm mobile-scroll-table">
-                                                <table className="w-full text-left border-collapse">
+<div className="desktop-compare-table overflow-hidden border border-slate-200 rounded-2xl sm:rounded-3xl shadow-sm">
+    <table className="w-full text-left border-collapse">
                                                     <thead>
                                                         <tr className="bg-slate-50 border-b border-slate-200">
                                                             <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-24 text-center">操作</th>
@@ -1406,6 +1465,110 @@ const handleExport = () => {
                                                     </tbody>
                                                 </table>
                                             </div>
+
+<div className="mobile-compare-card-list space-y-4">
+    {currentLawData?.rows.map((row, idx) => (
+        <div key={`mobile-${idx}`} className="mobile-compare-card">
+            <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        條號
+                    </div>
+                    <div className="text-base font-black text-blue-600 mt-1">
+                        {isAdmin ? (
+                            <input
+                                className="admin-input"
+                                value={row.no}
+                                onChange={(e) => updateDetailField(selectedLaw.id, idx, 'no', e.target.value)}
+                            />
+                        ) : row.no}
+                    </div>
+                </div>
+
+                <div className="text-right">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        異動屬性
+                    </div>
+                    <div className="mt-1">
+                        {isAdmin ? (
+                            <input
+                                className="admin-input text-amber-700 font-black text-right"
+                                value={row.note}
+                                onChange={(e) => updateDetailField(selectedLaw.id, idx, 'note', e.target.value)}
+                            />
+                        ) : (
+                            <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-black">
+                                {row.note}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {isAdmin && (
+                <div className="mb-3">
+                    <button
+                        onClick={() => removeDetailRow(selectedLaw.id, idx)}
+                        className="w-full py-2 rounded-xl bg-rose-50 text-rose-500 text-xs font-black hover:bg-rose-500 hover:text-white transition-all row-action-btn"
+                    >
+                        <i className="fas fa-trash-alt mr-2"></i>
+                        移除此條文
+                    </button>
+                </div>
+            )}
+
+            <div className="space-y-3">
+                <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                        舊版條文
+                    </div>
+
+                    {isAdmin ? (
+                        <textarea
+                            className="w-full mobile-compare-old outline-none"
+                            value={row.old}
+                            onChange={(e) => updateDetailField(selectedLaw.id, idx, 'old', e.target.value)}
+                        />
+                    ) : (
+                        <div className="mobile-compare-content mobile-compare-old">
+                            {row.old}
+                        </div>
+                    )}
+                </div>
+
+                <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                        新版條文
+                    </div>
+
+                    {isAdmin ? (
+                        <textarea
+                            className="w-full mobile-compare-new outline-none"
+                            value={row.new}
+                            onChange={(e) => updateDetailField(selectedLaw.id, idx, 'new', e.target.value)}
+                        />
+                    ) : (
+                        <div
+                            className="mobile-compare-content mobile-compare-new"
+                            dangerouslySetInnerHTML={{ __html: row.new }}
+                        ></div>
+                    )}
+                </div>
+            </div>
+        </div>
+    ))}
+
+    {isAdmin && (
+        <button
+            onClick={() => addDetailRow(selectedLaw.id)}
+            className="w-full py-4 border border-dashed border-slate-300 rounded-xl text-slate-400 font-bold hover:bg-slate-50 transition-all"
+        >
+            <i className="fas fa-plus mr-2"></i>
+            新增異動對照條文
+        </button>
+    )}
+</div>
+
                                         </div>
                                     </div>
                                 </div>
