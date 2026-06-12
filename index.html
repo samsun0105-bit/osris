@@ -178,19 +178,282 @@
 
         }
 
-        @media print {
-            header, footer, .back-nav-btn, .action-buttons, .sidebar-mock, .time-display-box, .admin-controls, .row-action-btn, .db-controls {
-                display: none !important;
-            }
-            body { background-color: white !important; }
-            .main-container { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
-            .workbench-card { border: none !important; box-shadow: none !important; padding: 0 !important; }
-            .print-header { display: block !important; margin-bottom: 2rem; border-bottom: 2px solid #333; padding-bottom: 1rem; }
-            table { width: 100% !important; border-collapse: collapse !important; page-break-inside: auto; }
-            tr { page-break-inside: avoid; page-break-after: auto; }
-            td, th { border: 1px solid #cbd5e1 !important; padding: 12px !important; }
-            @page { size: A4; margin: 1.5cm; }
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 14mm 12mm 16mm 12mm;
+
+        @bottom-center {
+            content: "第 " counter(page) " 頁 / 共 " counter(pages) " 頁";
+            font-size: 10px;
+            color: #64748b;
         }
+    }
+
+    header,
+    footer,
+    .back-nav-btn,
+    .action-buttons,
+    .sidebar-mock,
+    .time-display-box,
+    .admin-controls,
+    .row-action-btn,
+    .db-controls,
+    .mobile-compare-card-list {
+        display: none !important;
+    }
+
+    html,
+    body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: #0f172a !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .main-container {
+        padding: 0 !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        max-width: 186mm !important;
+    }
+
+    .workbench-card {
+        width: 100% !important;
+        max-width: 186mm !important;
+        margin: 0 auto !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+    }
+
+    .workbench-card > div:first-child {
+        padding: 0 0 8mm 0 !important;
+        margin: 0 0 6mm 0 !important;
+        border-bottom: 2px solid #111827 !important;
+        background: #ffffff !important;
+    }
+
+    .workbench-card > div:first-child .inline-flex {
+        display: none !important;
+    }
+
+    .workbench-card h2 {
+        text-align: center !important;
+        font-size: 22px !important;
+        line-height: 1.35 !important;
+        font-weight: 900 !important;
+        color: #111827 !important;
+        margin: 0 0 6mm 0 !important;
+        letter-spacing: 0.06em !important;
+    }
+
+    .workbench-card h2::before {
+        content: "職業安全法規鑑別報告";
+        display: block;
+        font-size: 24px;
+        line-height: 1.3;
+        font-weight: 900;
+        color: #111827;
+        letter-spacing: 0.12em;
+        margin-bottom: 5mm;
+    }
+
+/* 列印標題區：主標題、法規名稱、日期資訊置中 */
+.workbench-card > div:first-child > div {
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+}
+
+/* 標題文字區置中 */
+.workbench-card > div:first-child .space-y-5 {
+    width: 100% !important;
+    text-align: center !important;
+}
+
+/* 日期列：只套用在標題文字區內的日期區塊，不影響右側 action-buttons */
+.workbench-card > div:first-child .space-y-5 > .grid.grid-cols-2 {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8mm !important;
+    width: 100% !important;
+}
+
+/* 日期框本身 */
+.workbench-card .px-4.py-2.bg-white {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2mm !important;
+    min-width: 55mm !important;
+    padding: 3mm 5mm !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    border-radius: 6px !important;
+    background: #f8fafc !important;
+    text-align: center !important;
+}
+
+/* 日期框標籤：最新公佈日：、最近鑑別/登錄日： */
+.workbench-card .px-4.py-2.bg-white span:first-child {
+    display: inline !important;
+    color: #475569 !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    margin: 0 !important;
+}
+
+/* 列印時在日期標籤後方補上冒號 */
+.workbench-card .px-4.py-2.bg-white span:first-child::after {
+    content: "：";
+}
+
+/* 日期框日期文字 */
+.workbench-card .px-4.py-2.bg-white span:last-child {
+    display: inline !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+}
+
+    .workbench-card > div:last-child {
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    .workbench-card .bg-emerald-50 {
+        display: none !important;
+    }
+
+    .desktop-compare-table {
+        display: block !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+    }
+
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        table-layout: fixed !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+        font-size: 12px !important;
+    }
+
+    thead {
+        display: table-header-group !important;
+    }
+
+    tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: auto !important;
+    }
+
+    th {
+        background: #e5e7eb !important;
+        color: #111827 !important;
+        border: 1px solid #94a3b8 !important;
+        padding: 8px 7px !important;
+        font-size: 12px !important;
+        line-height: 1.4 !important;
+        font-weight: 900 !important;
+        text-align: center !important;
+    }
+
+    td {
+        border: 1px solid #cbd5e1 !important;
+        padding: 8px 7px !important;
+        font-size: 12px !important;
+        line-height: 1.55 !important;
+        color: #1e293b !important;
+        vertical-align: top !important;
+        background: #ffffff !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    th:first-child,
+    td:first-child {
+        width: 10mm !important;
+        text-align: center !important;
+    }
+
+    th:nth-child(2),
+    td:nth-child(2) {
+        width: 24mm !important;
+    }
+
+    th:nth-child(4),
+    td:nth-child(4) {
+        width: 28mm !important;
+    }
+
+    td .space-y-4 {
+        margin: 0 !important;
+    }
+
+    td .space-y-4 > div {
+        margin-top: 0 !important;
+        margin-bottom: 4px !important;
+    }
+
+    td .bg-slate-50,
+    td .bg-blue-50\/30 {
+        border-radius: 4px !important;
+        padding: 6px 7px !important;
+        background: #ffffff !important;
+        border-left-width: 3px !important;
+    }
+
+    td .line-through {
+        color: #64748b !important;
+        text-decoration: line-through !important;
+        background: #f8fafc !important;
+    }
+
+    ins {
+        background: #e6ffed !important;
+        color: #065f46 !important;
+        text-decoration: none !important;
+        border-bottom: 1px solid #059669 !important;
+        font-weight: 700 !important;
+        padding: 0 2px !important;
+    }
+
+    del {
+        background: #ffeef0 !important;
+        color: #991b1b !important;
+        text-decoration: line-through !important;
+        padding: 0 2px !important;
+    }
+
+    .px-4.py-1\.5.bg-amber-100 {
+        display: inline-block !important;
+        background: #fef3c7 !important;
+        color: #92400e !important;
+        border: 1px solid #fcd34d !important;
+        border-radius: 999px !important;
+        padding: 3px 8px !important;
+        font-size: 11px !important;
+        font-weight: 900 !important;
+    }
+
+/* 再次保險：列印時強制隱藏操作按鈕 */
+.action-buttons,
+.action-buttons button {
+    display: none !important;
+}
+
+}
         .print-header { display: none; }
     </style>
 </head>
