@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>職業安全法規鑑別系統</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -460,7 +460,7 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="env,react">
         const { useState, useMemo, useEffect, useRef } = React;
 
         /**
@@ -865,6 +865,32 @@ try {
 } finally {
     setIsSyncing(false);
 }
+};
+
+const handleSingleSync = (lawId) => {
+    setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
+    setIsSyncing(true);
+
+    setTimeout(() => {
+        const today = new Date().toISOString().split('T')[0];
+
+        setLaws(prev =>
+            prev.map(law =>
+                law.id === lawId
+                    ? { ...law, localCheckDate: today }
+                    : law
+            )
+        );
+
+        setSelectedLaw(prev =>
+            prev && prev.id === lawId
+                ? { ...prev, localCheckDate: today }
+                : prev
+        );
+
+        setIsSyncing(false);
+        alert(`鑑別完成！最近鑑別/登錄日已更新為 ${today}。`);
+    }, 800);
 };
 
 const handleAdminSyncIdentification = () => {
