@@ -649,7 +649,7 @@ const handleLogin = async () => {
                         </div>
                     )}
 
-                    <header className="bg-slate-900 border-b border-slate-800 px-10 py-6 flex justify-between items-center sticky top-0 z-40 shadow-xl">
+                    <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-10 py-6 flex flex-col lg:flex-row gap-6 justify-between items-stretch lg:items-center sticky top-0 z-40 shadow-xl">
                         <div className="flex items-center gap-6">
                             <div className="bg-blue-600 w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
                                 <i className="fas fa-shield-halved text-3xl"></i>
@@ -671,22 +671,22 @@ const handleLogin = async () => {
                             <div className="time-display-box">
                                 <span className="text-slate-400 font-black text-xs tracking-widest tabular-nums opacity-90">{formatTime(currentTime)}</span>
                             </div>
-                            <div className="flex items-center gap-4">
-                                <button onClick={handleResetSystem} className="hidden lg:flex items-center justify-center gap-3 w-40 py-2.5 bg-slate-800 text-rose-400 rounded-xl text-sm font-black hover:bg-slate-700 transition-all shadow-lg border-b-4 border-slate-950">
+                            <div className="grid grid-cols-2 sm:flex items-center gap-3 w-full lg:w-auto">
+                                <button onClick={handleResetSystem} className="flex items-center justify-center gap-3 w-full sm:w-40 py-2.5 bg-slate-800 text-rose-400 rounded-xl text-sm font-black hover:bg-slate-700 transition-all shadow-lg border-b-4 border-slate-950">
                                     <i className="fas fa-undo-alt"></i> 重製系統
                                 </button>
-                                <button onClick={handleAllSync} className="hidden lg:flex items-center justify-center gap-3 w-40 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg border-b-4 border-emerald-900">
+                                <button onClick={handleAllSync} className="flex items-center justify-center gap-3 w-full sm:w-40 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg border-b-4 border-emerald-900">
                                     <i className="fas fa-rotate"></i> 智能同步
                                 </button>
-                                <button onClick={handleExport} className="hidden lg:flex items-center justify-center gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-800 transition-all shadow-lg border-b-4 border-slate-950">
+                                <button onClick={handleExport} className="flex items-center justify-center gap-3 w-full sm:w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-800 transition-all shadow-lg border-b-4 border-slate-950">
                                     <i className="fas fa-file-export"></i> 匯出總表
                                 </button>
                                 {isAdmin ? (
-                                    <button onClick={handleLogout} className="flex items-center justify-center gap-3 w-40 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
+                                    <button onClick={handleLogout} className="flex items-center justify-center gap-3 w-full sm:w-40 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
                                         <i className="fas fa-sign-out-alt"></i> 儲存並登出
                                     </button>
                                 ) : (
-                                    <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="flex items-center justify-center gap-3 w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
+                                    <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="flex items-center justify-center gap-3 w-full sm:w-40 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
                                         <i className="fas fa-lock"></i> 管理員登入
                                     </button>
                                 )}
@@ -716,8 +716,8 @@ const handleLogin = async () => {
                                             <h2 className="text-3xl font-black text-slate-800 tracking-tight">法規動態監測</h2>
                                             <p className="text-slate-500 text-base font-medium mt-1">系統正在即時比對全國法規資料庫之最新修訂內容</p>
                                         </div>
-                                        <div className="flex flex-col gap-4 items-end">
-                                            <div className="flex items-center gap-3">
+                                        <div className="flex flex-col gap-4 items-stretch md:items-end w-full md:w-auto">
+                                            <div className="grid grid-cols-2 sm:flex items-center gap-3 w-full">
                                                 <button onClick={exportDatabase} className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-slate-700 transition-all active:scale-95">
                                                     <i className="fas fa-share-nodes"></i> 導出數據
                                                 </button>
@@ -823,7 +823,7 @@ const handleLogin = async () => {
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center gap-4 shrink-0 ml-20 lg:ml-0">
+                                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 shrink-0 ml-0 w-full lg:w-auto">
                                                         {isAdmin && (
                                                             <button onClick={() => removeLaw(law.id)} className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center" title="移除此法規"><i className="fas fa-trash-alt"></i></button>
                                                         )}
@@ -935,8 +935,8 @@ const handleLogin = async () => {
                                                 </div>
                                             </div>
 
-                                            <div className="overflow-hidden border border-slate-200 rounded-3xl shadow-sm">
-                                                <table className="w-full text-left border-collapse">
+                                            <div className="overflow-x-auto border border-slate-200 rounded-3xl shadow-sm">
+                                                <table className="min-w-[900px] w-full text-left border-collapse">
                                                     <thead>
                                                         <tr className="bg-slate-50 border-b border-slate-200">
                                                             <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-24 text-center">操作</th>
