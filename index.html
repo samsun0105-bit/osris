@@ -69,6 +69,37 @@
             background: rgba(59, 130, 246, 0.05);
         }
 
+/* 權限與密碼設定：密碼輸入框統一為績效管理系統視覺比例 */
+.permission-password-input {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background-color: #f1f5f9;
+    border: none;
+    border-radius: 0.5rem;
+    outline: none;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 400;
+    color: #334155;
+    text-align: left;
+    letter-spacing: 0.16em;
+    transition: all 0.2s ease;
+}
+
+.permission-password-input:focus {
+    box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.permission-password-input::placeholder {
+    color: #94a3b8;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    opacity: 1;
+}
+
 .mobile-compare-card-list {
     display: none;
 }
@@ -511,7 +542,8 @@
 const UNIFIED_INITIAL_DATE = '2026-03-02';
 const fileInputRef = useRef(null);
 
-const DEFAULT_ADMIN_PASSWORD = "1068";
+const DEFAULT_ADMIN_PASSWORD = "SamCore@1068";
+const DEFAULT_EDITOR_PASSWORD = "TeamUser001";
 const MASTER_RECOVERY_CODE = "SAM-SUN-CORE-RECOVERY";
 
             // 基礎狀態
@@ -524,20 +556,63 @@ const MASTER_RECOVERY_CODE = "SAM-SUN-CORE-RECOVERY";
             const [filterType, setFilterType] = useState('全部');
             const [currentTime, setCurrentTime] = useState(new Date());
             
-            // 管理員狀態
-            const [isAdmin, setIsAdmin] = useState(false);
-            const [showLoginModal, setShowLoginModal] = useState(false);
-            const [authMode, setAuthMode] = useState('login'); 
-            const [passwordInput, setPasswordInput] = useState('');
-            const [oldPasswordInput, setOldPasswordInput] = useState('');
-            const [newPasswordInput, setNewPasswordInput] = useState('');
-            const [loginError, setLoginError] = useState(false);
-            const [changeError, setChangeError] = useState('');
+// 權限狀態
+const [isAdmin, setIsAdmin] = useState(false);
+const [isEditor, setIsEditor] = useState(false);
+const [showLoginModal, setShowLoginModal] = useState(false);
+const [showPermissionSettingsModal, setShowPermissionSettingsModal] = useState(false);
 
-            // 法規主數據與內容
-            const [adminPassword, setAdminPassword] = useState('1068');
-            const [laws, setLaws] = useState([]);
-            const [lawDetails, setLawDetails] = useState({});
+const [passwordInput, setPasswordInput] = useState('');
+const [oldPasswordInput, setOldPasswordInput] = useState('');
+const [newAdminPasswordInput, setNewAdminPasswordInput] = useState('');
+const [newEditorPasswordInput, setNewEditorPasswordInput] = useState('');
+const [loginError, setLoginError] = useState(false);
+const [changeError, setChangeError] = useState('');
+
+// 預覽載入狀態：避免「載入預覽」覆蓋正式資料庫
+const previewDataModeRef = useRef(false);
+const [isPreviewDataMode, setIsPreviewDataMode] = useState(false);
+
+// 法規主數據與內容
+const [adminPassword, setAdminPassword] = useState(DEFAULT_ADMIN_PASSWORD);
+const [editorPassword, setEditorPassword] = useState(DEFAULT_EDITOR_PASSWORD);
+const [editorEnabled, setEditorEnabled] = useState(true);
+const [laws, setLaws] = useState([]);
+const [lawDetails, setLawDetails] = useState({});
+
+const getCurrentRole = () => {
+    if (isAdmin) return 'admin';
+    if (isEditor) return 'editor';
+    return 'viewer';
+};
+
+const canEditData = () => isAdmin || isEditor;
+const canDeleteData = () => isAdmin;
+const canChangePassword = () => isAdmin;
+
+/* 預覽者、使用者、管理者都可使用 */
+const canUseSmartSync = () => true;
+const canExportReport = () => true;
+const canExportBackupData = () => isAdmin || isEditor;
+const canLoadPreviewData = () => true;
+const canViewLawList = () => true;
+const canViewCompareDetail = () => true;
+const canPrintReport = () => true;
+
+/* 使用者與管理者可使用正式載入資料 */
+const canImportData = () => isAdmin || isEditor;
+
+/* 法規監測清單管理：僅管理者 */
+const canEditLawMonitor = () => isAdmin;
+const canAddLawMonitor = () => isAdmin;
+const canDeleteLawMonitor = () => isAdmin;
+const canSyncIdentificationAll = () => isAdmin;
+
+/* 鑑別工作台條文：使用者可新增、編輯；刪除限管理者 */
+const canEditDetailRows = () => isAdmin || isEditor;
+const canAddDetailRows = () => isAdmin || isEditor;
+const canDeleteDetailRows = () => isAdmin;
+const canConfirmIdentification = () => isAdmin || isEditor;
 
             // 初始化：從 IndexedDB 讀取
             useEffect(() => {
@@ -546,6 +621,8 @@ const MASTER_RECOVERY_CODE = "SAM-SUN-CORE-RECOVERY";
                         const savedLaws = await dbManager.get('laws');
                         const savedDetails = await dbManager.get('details');
                         const savedPwd = await dbManager.get('admin_pwd');
+const savedEditorPwd = await dbManager.get('editor_pwd');
+const savedEditorEnabled = await dbManager.get('editor_enabled');
 
                         if (savedLaws) setLaws(savedLaws);
                         else {
@@ -596,7 +673,26 @@ const MASTER_RECOVERY_CODE = "SAM-SUN-CORE-RECOVERY";
                             });
                         }
 
-                        if (savedPwd) setAdminPassword(savedPwd);
+if (!savedPwd) {
+    setAdminPassword(DEFAULT_ADMIN_PASSWORD);
+    await dbManager.set('admin_pwd', DEFAULT_ADMIN_PASSWORD);
+} else {
+    setAdminPassword(savedPwd);
+}
+
+if (!savedEditorPwd) {
+    setEditorPassword(DEFAULT_EDITOR_PASSWORD);
+    await dbManager.set('editor_pwd', DEFAULT_EDITOR_PASSWORD);
+} else {
+    setEditorPassword(savedEditorPwd);
+}
+
+if (savedEditorEnabled === undefined || savedEditorEnabled === null) {
+    setEditorEnabled(true);
+    await dbManager.set('editor_enabled', true);
+} else {
+    setEditorEnabled(Boolean(savedEditorEnabled));
+}
 
                         setIsLoaded(true);
                     } catch (err) {
@@ -608,19 +704,30 @@ const MASTER_RECOVERY_CODE = "SAM-SUN-CORE-RECOVERY";
             }, []);
 
             // 持久化：當資料變動時存入 IndexedDB
-            useEffect(() => {
-                if (isLoaded) {
-                    dbManager.set('laws', laws);
-                    dbManager.set('details', lawDetails);
-                    dbManager.set('admin_pwd', adminPassword);
-                }
-            }, [laws, lawDetails, adminPassword, isLoaded]);
+useEffect(() => {
+    if (isLoaded && !previewDataModeRef.current) {
+        dbManager.set('laws', laws);
+        dbManager.set('details', lawDetails);
+        dbManager.set('admin_pwd', adminPassword);
+        dbManager.set('editor_pwd', editorPassword);
+        dbManager.set('editor_enabled', editorEnabled);
+    }
+}, [laws, lawDetails, adminPassword, editorPassword, editorEnabled, isLoaded]);
+
+useEffect(() => {
+    const timer = setInterval(() => {
+        setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+}, []);
 
 useEffect(() => {
     const handleEsc = (e) => {
-        if (e.key === 'Escape') {
-            setShowLoginModal(false);
-        }
+if (e.key === 'Escape') {
+    setShowLoginModal(false);
+    setShowPermissionSettingsModal(false);
+}
     };
 
     document.addEventListener('keydown', handleEsc);
@@ -647,41 +754,18 @@ useEffect(() => {
                 return rDate > lDate;
             };
 
-            const processSyncFile = (file, targetLawId = null) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const syncData = JSON.parse(e.target.result);
-                        setLaws(prevLaws => {
-                            return prevLaws.map(law => {
-                                if (targetLawId !== null && law.id !== targetLawId) return law;
-                                const match = syncData.find(item => item.Pcode === law.pcode);
-                                if (match) {
-                                    const jsonDate = new Date(match.LastUpdate);
-                                    const currentRemote = new Date(law.remoteDate);
-                                    if (jsonDate > currentRemote) {
-                                        return { ...law, remoteDate: match.LastUpdate };
-                                    }
-                                }
-                                return law;
-                            });
-                        });
-                        
-                        if (targetLawId) {
-                            finalizeSingleSync(targetLawId);
-                        } else {
-                            finalizeAllSync();
-                        }
-                    } catch (err) {
-                        alert('校對失敗：無法解析 law_sync_status.json。');
-                        setIsSyncing(false);
-                    }
-                };
-                reader.readAsText(file);
-            };
+const exportDatabase = () => {
+    if (!canExportBackupData()) {
+        alert('目前權限無法匯出資料。');
+        return;
+    }
 
-            const exportDatabase = () => {
-                const dataStr = JSON.stringify({ laws, lawDetails }, null, 2);
+    if (previewDataModeRef.current) {
+        alert('目前為預覽資料模式，請先重新載入正式資料後再匯出。');
+        return;
+    }
+
+    const dataStr = JSON.stringify({ laws, lawDetails }, null, 2);
                 const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
                 const exportFileDefaultName = `職業安全法規鑑別系統_RIS_${new Date().toISOString().split('T')[0]}.json`;
                 const linkElement = document.createElement('a');
@@ -690,93 +774,187 @@ useEffect(() => {
                 linkElement.click();
             };
 
-            const importDatabase = (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const importedData = JSON.parse(e.target.result);
-                        if (importedData.laws && importedData.lawDetails) {
-                            if (confirm('導入數據庫將覆蓋目前所有紀錄，確定要繼續嗎？')) {
-                                setLaws(importedData.laws);
-                                setLawDetails(importedData.lawDetails);
-                                alert('數據庫導入成功！');
-                            }
-                        } else {
-                            alert('無效的數據庫檔案格式。');
-                        }
-                    } catch (err) {
-                        alert('檔案解析失敗：' + err.message);
-                    }
-                };
-                reader.readAsText(file);
-                event.target.value = '';
-            };
+const importDatabase = (event, mode = 'import') => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (mode === 'import' && !canImportData()) {
+        alert('請先登入使用者或管理者權限後再載入資料。');
+        setShowLoginModal(true);
+        event.target.value = '';
+        return;
+    }
+
+    if (mode === 'preview' && !canLoadPreviewData()) {
+        alert('目前無法載入預覽資料。');
+        event.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const importedData = JSON.parse(e.target.result);
+
+            if (importedData.laws && importedData.lawDetails) {
+                if (mode === 'preview') {
+                    previewDataModeRef.current = true;
+                    setIsPreviewDataMode(true);
+                    setLaws(importedData.laws);
+                    setLawDetails(importedData.lawDetails);
+                    alert('預覽資料載入成功！此資料僅供預覽，不會覆蓋正式資料庫。');
+                    return;
+                }
+
+const importLabel = isAdmin ? '匯入資料' : '載入資料';
+
+if (confirm(`${importLabel}將覆蓋目前所有紀錄，確定要繼續嗎？`)) {
+    previewDataModeRef.current = false;
+    setIsPreviewDataMode(false);
+    setLaws(importedData.laws);
+    setLawDetails(importedData.lawDetails);
+    alert(`${importLabel}成功！`);
+}
+            } else {
+                alert('無效的資料檔案格式。');
+            }
+        } catch (err) {
+            alert('檔案解析失敗：' + err.message);
+        }
+    };
+
+    reader.readAsText(file);
+    event.target.value = '';
+};
 
 const handleLogin = async () => {
     if (passwordInput === MASTER_RECOVERY_CODE) {
         setAdminPassword(DEFAULT_ADMIN_PASSWORD);
+        setEditorPassword(DEFAULT_EDITOR_PASSWORD);
+        setEditorEnabled(true);
+
         await dbManager.set('admin_pwd', DEFAULT_ADMIN_PASSWORD);
+        await dbManager.set('editor_pwd', DEFAULT_EDITOR_PASSWORD);
+        await dbManager.set('editor_enabled', true);
 
         setIsAdmin(false);
+        setIsEditor(false);
         setShowLoginModal(false);
         setPasswordInput('');
         setLoginError(false);
 
-        alert('管理員設定已恢復，請重新登入後再修改新密碼。');
+        alert('權限與密碼設定已恢復預設值，請重新登入後再修改。');
         return;
     }
 
     if (passwordInput === adminPassword) {
         setIsAdmin(true);
+        setIsEditor(false);
         setShowLoginModal(false);
         setPasswordInput('');
         setLoginError(false);
-    } else {
-        setLoginError(true);
+        return;
     }
+
+    if (editorEnabled && passwordInput === editorPassword) {
+        setIsAdmin(false);
+        setIsEditor(true);
+        setShowLoginModal(false);
+        setPasswordInput('');
+        setLoginError(false);
+        return;
+    }
+
+    setLoginError(true);
 };
 
-            const handleChangePassword = () => {
-                if (oldPasswordInput !== adminPassword) {
-                    setChangeError('舊密碼不正確');
-                    return;
-                }
-                if (newPasswordInput.length < 4) {
-                    setChangeError('新密碼長度至少需 4 碼');
-                    return;
-                }
-                setAdminPassword(newPasswordInput);
-                setAuthMode('login');
-                setOldPasswordInput('');
-                setNewPasswordInput('');
-                setChangeError('');
-                alert('密碼修改成功，請重新登入。');
-            };
+const handleChangePassword = () => {
+    if (!canChangePassword()) {
+        setChangeError('僅管理者可修改權限與密碼設定');
+        return;
+    }
 
-            const handleLogout = () => {
-                setIsAdmin(false);
-                setActiveTab('monitor');
-            };
+    const nextAdminPassword = newAdminPasswordInput.trim();
+    const nextEditorPassword = newEditorPasswordInput.trim();
 
-            const addNewLaw = () => {
-                const newId = Math.max(...laws.map(l => l.id), 0) + 1;
+    /*
+     * 管理者密碼安全規則：
+     * 只有「要更新管理者密碼」時，才需要再次輸入目前管理者密碼。
+     * 更新使用者密碼、啟用/停用使用者共用權限，不需再次輸入管理者密碼。
+     */
+    if (nextAdminPassword) {
+        if (oldPasswordInput !== adminPassword) {
+            setChangeError('若要更新管理者密碼，請先輸入目前管理者密碼');
+            return;
+        }
+
+        if (nextAdminPassword.length < 4) {
+            setChangeError('新管理者密碼長度至少需 4 碼');
+            return;
+        }
+    }
+
+    if (nextEditorPassword && nextEditorPassword.length < 4) {
+        setChangeError('新使用者密碼長度至少需 4 碼');
+        return;
+    }
+
+    if (nextAdminPassword) {
+        setAdminPassword(nextAdminPassword);
+    }
+
+    if (nextEditorPassword) {
+        setEditorPassword(nextEditorPassword);
+    }
+
+    setOldPasswordInput('');
+    setNewAdminPasswordInput('');
+    setNewEditorPasswordInput('');
+    setChangeError('');
+    setShowPermissionSettingsModal(false);
+
+    alert('權限與密碼設定已更新成功。');
+};
+
+const handleLogout = () => {
+    setIsAdmin(false);
+    setIsEditor(false);
+    setActiveTab('monitor');
+};
+
+const addNewLaw = () => {
+    if (!canAddLawMonitor()) {
+        alert('只有管理者可以新增法規監測項目。');
+        return;
+    }
+
+    const newId = Math.max(...laws.map(l => l.id), 0) + 1;
                 setLaws([...laws, { id: newId, pcode: 'NEW_CODE', name: '新法規名稱', type: '法規命令', remoteDate: '2026-03-01', localCheckDate: '2026-03-01' }]);
             };
 
-            const removeLaw = (id) => {
-                if(confirm('確定要移除此法規監測項目嗎？相關鑑別紀錄也會消失。')) {
+const removeLaw = (id) => {
+    if (!canDeleteLawMonitor()) {
+        alert('只有管理者可以刪除法規監測項目。');
+        return;
+    }
+
+    if(confirm('確定要移除此法規監測項目嗎？相關鑑別紀錄也會消失。')) {
                     setLaws(prev => prev.filter(law => law.id !== id));
                 }
             };
 
-            const updateLawField = (id, field, value) => {
-                setLaws(prev => prev.map(law => law.id === id ? { ...law, [field]: value } : law));
-            };
+const updateLawField = (id, field, value) => {
+    if (!canEditLawMonitor()) return;
+    setLaws(prev => prev.map(law => law.id === id ? { ...law, [field]: value } : law));
+};
 
-            const moveLaw = (index, direction) => {
-                const newLaws = [...laws];
+const moveLaw = (index, direction) => {
+    if (!canEditLawMonitor()) {
+        alert('只有管理者可以調整法規排序。');
+        return;
+    }
+
+    const newLaws = [...laws];
                 const targetIndex = index + direction;
                 if (targetIndex < 0 || targetIndex >= newLaws.length) return;
                 const temp = newLaws[index];
@@ -785,8 +963,10 @@ const handleLogin = async () => {
                 setLaws(newLaws);
             };
 
-            const updateDetailField = (lawId, rowIndex, field, value) => {
-                setLawDetails(prev => {
+const updateDetailField = (lawId, rowIndex, field, value) => {
+    if (!canEditDetailRows()) return;
+
+    setLawDetails(prev => {
                     const current = prev[lawId] || { rows: [] };
                     const newRows = [...current.rows];
                     if (!newRows[rowIndex]) {
@@ -797,30 +977,46 @@ const handleLogin = async () => {
                 });
             };
 
-            const removeDetailRow = (lawId, rowIndex) => {
-                setLawDetails(prev => {
+const removeDetailRow = (lawId, rowIndex) => {
+    if (!canDeleteDetailRows()) {
+        alert('只有管理者可以刪除條文。');
+        return;
+    }
+
+    setLawDetails(prev => {
                     const current = prev[lawId] || { rows: [] };
                     const newRows = current.rows.filter((_, idx) => idx !== rowIndex);
                     return { ...prev, [lawId]: { rows: newRows } };
                 });
             };
 
-            const addDetailRow = (lawId) => {
-                setLawDetails(prev => {
+const addDetailRow = (lawId) => {
+    if (!canAddDetailRows()) {
+        alert('請先登入使用者或管理者權限後再新增條文。');
+        setShowLoginModal(true);
+        return;
+    }
+
+    setLawDetails(prev => {
                     const current = prev[lawId] || { rows: [] };
                     return { ...prev, [lawId]: { rows: [...current.rows, { no: '新條號', old: '舊條文內容', new: '新條文內容', note: '異動類型' }] } };
                 });
             };
 
 const handleAllSync = async () => {
-    setSyncText('正在連線全國法規資料庫...\n(約需10~20秒，請稍候)');
+    if (!canUseSmartSync()) {
+        alert('目前權限無法使用智能同步。');
+        return;
+    }
+
+    setSyncText('智能同步執行中');
     setIsSyncing(true);
 
 try {
     // 建立控制器（用來中斷請求）
     const controller = new AbortController();
 
-    // 設定30秒後自動中止
+    // 設定60秒後自動中止，避免外部法規資料庫偶發延遲造成同步失敗
     const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     // 發送請求（帶入 signal）
@@ -858,7 +1054,7 @@ try {
 
 } catch (error) {
     if (error.name === 'AbortError') {
-        alert('同步逾時（30秒），請稍後再試');
+        alert('同步等候逾時，可能是全國法規資料庫暫時回應較慢，請稍後再試。');
     } else {
         alert('同步失敗：' + error.message);
     }
@@ -868,6 +1064,12 @@ try {
 };
 
 const handleSingleSync = (lawId) => {
+    if (!canConfirmIdentification()) {
+        alert('請先登入使用者或管理者權限後再更新鑑別日期。');
+        setShowLoginModal(true);
+        return;
+    }
+
     setSyncText('正在重新分析條文異動並更新鑑別紀錄...');
     setIsSyncing(true);
 
@@ -894,7 +1096,10 @@ const handleSingleSync = (lawId) => {
 };
 
 const handleAdminSyncIdentification = () => {
-    if (!isAdmin) return;
+    if (!canSyncIdentificationAll()) {
+        alert('只有管理者可以同步所有法規的鑑別日期。');
+        return;
+    }
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -927,6 +1132,11 @@ const handleAdminSyncIdentification = () => {
             };
 
 const handleExport = () => {
+    if (!canExportReport()) {
+        alert('目前權限無法匯出報表。');
+        return;
+    }
+
     const now = new Date();
     const year = now.getFullYear();
     const quarter = Math.ceil((now.getMonth() + 1) / 3);
@@ -1196,15 +1406,21 @@ const handleExport = () => {
                 return laws.filter(law => (filterType === '全部' || law.type === filterType) && (law.name.includes(searchQuery) || law.pcode.includes(searchQuery)));
             }, [searchQuery, filterType, laws]);
 
-            const startSync = (law) => {
-                setSyncText(`正在連線資料庫讀取《${law.name}》最新條文...`);
-                setIsSyncing(true);
-                setTimeout(() => {
-                    setSelectedLaw(law);
-                    setActiveTab('compare');
-                    setIsSyncing(false);
-                }, 1500);
-            };
+const startSync = (law) => {
+    if (!canViewCompareDetail()) {
+        alert('目前權限無法查看比對詳情。');
+        return;
+    }
+
+    setSyncText(`正在連線資料庫讀取《${law.name}》最新條文...`);
+    setIsSyncing(true);
+
+    setTimeout(() => {
+        setSelectedLaw(law);
+        setActiveTab('compare');
+        setIsSyncing(false);
+    }, 1500);
+};
 
             const currentLawData = useMemo(() => {
                 if (!selectedLaw) return null;
@@ -1224,110 +1440,163 @@ const handleExport = () => {
 
             return (
                 <div className="min-h-screen flex flex-col">
-                    {/* Login & Change Password Modal */}
-                    {showLoginModal && (
-                        <div 
-    className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4"
-    onClick={() => setShowLoginModal(false)}
->
-                            <div 
-    className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-200 fade-in"
-    onClick={(e) => e.stopPropagation()}
->
-                                {authMode === 'login' ? (
-                                    <>
-                                        <div className="text-center mb-8">
-                                            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mx-auto mb-4">
-                                                <i className="fas fa-user-shield text-3xl"></i>
-                                            </div>
-                                            <h3 className="text-2xl font-black text-slate-800">管理員身份驗證</h3>
-                                            <p className="text-slate-500 text-sm mt-2">請輸入存取密碼以啟動編輯模式</p>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <input 
-                                                type="password" 
-                                                className={`w-full px-6 py-4 bg-slate-50 border ${loginError ? 'border-rose-400' : 'border-slate-200'} rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-center text-xl tracking-[0.5em]`}
-                                                placeholder="••••"
-                                                value={passwordInput}
-                                                onChange={(e) => setPasswordInput(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                                                autoFocus
-                                            />
-                                            {loginError && <p className="text-rose-500 text-xs font-bold text-center">密碼錯誤，請重新輸入</p>}
-                                            <button 
-                                                onClick={handleLogin}
-                                                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all"
-                                            >
-                                                啟動編輯模式
-                                            </button>
-                                            <div className="flex justify-between px-2">
-                                                <button 
-                                                    onClick={() => setAuthMode('changePassword')}
-                                                    className="text-xs text-blue-600 font-bold hover:underline"
-                                                >
-                                                    修改登入密碼
-                                                </button>
-                                                <button 
-                                                    onClick={() => setShowLoginModal(false)}
-                                                    className="text-xs text-slate-400 font-bold hover:text-slate-600 transition-all"
-                                                >
-                                                    取消
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="text-center mb-8">
-                                            <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mx-auto mb-4">
-                                                <i className="fas fa-key text-3xl"></i>
-                                            </div>
-                                            <h3 className="text-2xl font-black text-slate-800">修改管理密碼</h3>
-                                            <p className="text-slate-500 text-sm mt-2">請驗證身分並設定新密碼</p>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">目前的舊密碼</label>
-                                                <input 
-                                                    type="password" 
-                                                    className="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20 text-center tracking-[0.3em]"
-                                                    placeholder="OLD PASSWORD"
-                                                    value={oldPasswordInput}
-                                                    onChange={(e) => setOldPasswordInput(e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">設定新密碼</label>
-                                                <input 
-                                                    type="password" 
-                                                    className="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20 text-center tracking-[0.3em]"
-                                                    placeholder="NEW PASSWORD"
-                                                    value={newPasswordInput}
-                                                    onChange={(e) => setNewPasswordInput(e.target.value)}
-                                                />
-                                            </div>
-                                            {changeError && <p className="text-rose-500 text-xs font-bold text-center">{changeError}</p>}
-                                            <button 
-                                                onClick={handleChangePassword}
-                                                className="w-full py-4 bg-amber-500 text-white rounded-2xl font-black shadow-xl shadow-amber-600/20 hover:bg-amber-600 active:scale-[0.98] transition-all"
-                                            >
-                                                儲存變更密碼
-                                            </button>
-                                            <button 
-                                                onClick={() => {
-                                                    setAuthMode('login');
-                                                    setChangeError('');
-                                                }}
-                                                className="w-full py-2 text-slate-400 font-bold hover:text-slate-600 transition-all text-sm"
-                                            >
-                                                返回登入
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
+{/* 權限登入 Modal */}
+{showLoginModal && (
+    <div 
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4"
+        onClick={() => setShowLoginModal(false)}
+    >
+        <div 
+            className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl fade-in"
+            onClick={(e) => e.stopPropagation()}
+        >
+            <div className="flex flex-col items-center text-center mb-6">
+                <div className="bg-slate-100 p-3 rounded-full mb-4">
+                    <i className="fas fa-lock text-slate-600 text-2xl"></i>
+                </div>
+                <h3 className="text-xl font-black text-slate-900">安全驗證</h3>
+                <p className="text-slate-400 text-sm mt-1">請輸入管理者或使用者密碼以啟動對應權限</p>
+            </div>
+
+            <div className="space-y-4">
+                <input 
+                    type="password" 
+                    className={`w-full px-4 py-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none text-center text-xl tracking-[0.5em] ${loginError ? 'ring-2 ring-rose-300' : ''}`}
+                    placeholder="••••••"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                    autoFocus
+                />
+
+                {loginError && (
+                    <p className="text-center text-red-500 text-xs font-bold">
+                        密碼錯誤，請重新輸入
+                    </p>
+                )}
+
+                <div className="flex space-x-2">
+                    <button 
+                        onClick={() => setShowLoginModal(false)}
+                        className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition text-sm"
+                    >
+                        取消
+                    </button>
+
+                    <button 
+                        onClick={handleLogin}
+                        className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition text-sm"
+                    >
+                        確認登入
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
+
+{/* 權限與密碼設定 Modal：僅管理者可開啟 */}
+{showPermissionSettingsModal && (
+    <div 
+        className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4"
+        onClick={() => setShowPermissionSettingsModal(false)}
+    >
+        <div 
+            className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden fade-in"
+            onClick={(e) => e.stopPropagation()}
+        >
+            <div className="p-5">
+                <div className="flex flex-col items-center text-center mb-3">
+                    <div className="bg-yellow-50 p-2 rounded-full mb-2">
+                        <i className="fas fa-key text-yellow-600 text-lg w-6 h-6 flex items-center justify-center"></i>
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900">權限與密碼設定</h3>
+                    <p className="text-xs text-slate-500 mt-1">僅管理者可修改密碼與使用者權限</p>
+                </div>
+
+                <div className="space-y-2">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">
+                            目前管理者密碼
+                        </label>
+                        <input
+                            type="password"
+                            className="permission-password-input"
+                            placeholder="••••••"
+                            value={oldPasswordInput}
+                            onChange={(e) => setOldPasswordInput(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">
+                            新管理者密碼
+                        </label>
+                        <input
+                            type="password"
+                            className="permission-password-input"
+                            placeholder="••••••"
+                            value={newAdminPasswordInput}
+                            onChange={(e) => setNewAdminPasswordInput(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">
+                            新使用者密碼
+                        </label>
+                        <input
+                            type="password"
+                            className="permission-password-input"
+                            placeholder="••••••"
+                            value={newEditorPasswordInput}
+                            onChange={(e) => setNewEditorPasswordInput(e.target.value)}
+                        />
+                    </div>
+
+                    <label className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={editorEnabled}
+                            onChange={(e) => setEditorEnabled(e.target.checked)}
+                            className="w-4 h-4 accent-blue-600"
+                        />
+                        <span className="text-sm font-bold text-slate-700">啟用使用者共用權限</span>
+                    </label>
+
+                    <p className="text-[11px] text-slate-400 leading-snug">
+                        使用者權限可載入資料、匯出資料，並可於鑑別工作台新增與編輯條文；刪除及權限設定仍限管理者。
+                    </p>
+
+                    {changeError && (
+                        <p className="text-center text-red-500 text-[10px] font-bold">
+                            {changeError}
+                        </p>
                     )}
+
+                    <div className="flex space-x-2 pt-1">
+                        <button
+                            onClick={() => {
+                                setShowPermissionSettingsModal(false);
+                                setChangeError('');
+                            }}
+                            className="flex-1 py-1.5 bg-slate-100 text-slate-600 rounded-lg font-bold hover:bg-slate-200 transition text-xs"
+                        >
+                            取消
+                        </button>
+
+                        <button
+                            onClick={handleChangePassword}
+                            className="flex-1 py-1.5 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 transition text-xs"
+                        >
+                            儲存設定
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
 
                     <header className="bg-slate-900 border-b border-slate-800 px-4 py-4 sm:px-10 sm:py-6 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 sm:gap-0 sticky top-0 z-40 shadow-xl">
                         <div className="flex items-center gap-3 sm:gap-6">
@@ -1358,40 +1627,96 @@ const handleExport = () => {
                                 </span>
                             </div>
                             
-                            <div className="grid grid-cols-3 sm:flex sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-                                <button onClick={handleAllSync} className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-emerald-600 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-emerald-700 transition-all shadow-lg border-b-4 border-emerald-900">
-                                    <i className="fas fa-rotate"></i> 智能同步
-                                </button>
-                                
-                                <button onClick={handleExport} className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-slate-700 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-slate-800 transition-all shadow-lg border-b-4 border-slate-950">
-                                    <i className="fas fa-file-export"></i> 匯出總表
-                                </button>
+<div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+{canUseSmartSync() && (
+    <button
+        onClick={handleAllSync}
+        className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-emerald-600 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-emerald-700 transition-all shadow-lg border-b-4 border-emerald-900"
+    >
+        <i className="fas fa-rotate"></i> 智能同步
+    </button>
+)}
+    
+{canExportReport() && (
+    <button
+        onClick={handleExport}
+        className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-slate-700 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-slate-800 transition-all shadow-lg border-b-4 border-slate-950"
+    >
+        <i className="fas fa-file-export"></i> 匯出總表
+    </button>
+)}
 
-                                {isAdmin ? (
-                                    <button onClick={handleLogout} className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-rose-600 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900">
-                                        <i className="fas fa-sign-out-alt"></i> 儲存並登出
-                                    </button>
-                                ) : (
-                                    <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-slate-700 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900">
-                                        <i className="fas fa-lock"></i> 管理員登入
-                                    </button>
-                                )}
-                            </div>
+    {(isAdmin || isEditor) ? (
+        <button
+            onClick={handleLogout}
+            className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-rose-600 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900"
+        >
+            <i className="fas fa-sign-out-alt"></i>
+            {isAdmin ? '管理者登出' : '使用者登出'}
+        </button>
+    ) : (
+        <button
+            onClick={() => {
+                setShowLoginModal(true);
+                setLoginError(false);
+                setPasswordInput('');
+            }}
+            className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-slate-700 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900"
+        >
+            <i className="fas fa-lock"></i> 權限登入
+        </button>
+    )}
+
+    {isAdmin && (
+        <button
+            onClick={() => {
+                setShowPermissionSettingsModal(true);
+                setChangeError('');
+                setOldPasswordInput('');
+                setNewAdminPasswordInput('');
+                setNewEditorPasswordInput('');
+            }}
+            className="flex items-center justify-center w-full sm:w-12 gap-1.5 py-2 sm:py-2.5 bg-slate-700 text-cyan-300 rounded-xl text-xs sm:text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900"
+            title="權限與密碼設定"
+        >
+            <i className="fas fa-gear"></i>
+        </button>
+    )}
+</div>
                         </div>
                     </header>
 
-                    {isSyncing && (
-                        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/70 backdrop-blur-md text-center">
-                            <div className="bg-white p-16 rounded-[3rem] shadow-2xl relative overflow-hidden max-w-sm w-full mx-4">
-                                <div className="scan-line absolute inset-0"></div>
-                                <div className="relative z-10">
-                                    <i className="fas fa-circle-notch text-6xl text-blue-600 animate-spin mb-8"></i>
-                                    <h3 className="text-2xl font-black text-slate-800 px-4 whitespace-pre-line">{syncText}</h3>
-                                    <p className="text-slate-500 mt-3 text-base font-medium">系統正在即時更新大數據資料庫紀錄...</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+{isSyncing && (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/70 backdrop-blur-md text-center">
+        <div className="bg-white px-8 py-10 sm:px-10 sm:py-12 rounded-[2rem] shadow-2xl relative overflow-hidden max-w-md w-full mx-4 border border-slate-100">
+            <div className="scan-line absolute top-0 left-0 right-0"></div>
+
+            <div className="relative z-10 flex flex-col items-center">
+                <div className="w-20 h-20 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6 shadow-inner">
+                    <i className="fas fa-rotate text-4xl animate-spin"></i>
+                </div>
+
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                    {syncText}
+                </h3>
+
+                <p className="text-slate-500 mt-3 text-sm sm:text-base font-medium leading-relaxed max-w-xs">
+                    正在比對全國法規資料庫最新修訂日期
+                </p>
+
+                <div className="mt-6 w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                    <div className="flex items-center justify-center gap-2 text-[11px] sm:text-xs font-black text-slate-500 tracking-widest uppercase">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                        </span>
+                        請勿關閉視窗，完成後將自動更新狀態
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
 
                     <main className="flex-1 p-4 sm:p-8 md:p-12 overflow-y-auto main-container">
                         <div className="max-w-6xl mx-auto">
@@ -1404,13 +1729,13 @@ const handleExport = () => {
                                         </div>
                                         <div className="flex flex-col gap-3 sm:gap-4 items-stretch sm:items-end">
 <div className="flex items-center justify-end gap-2 sm:gap-3 db-controls">
-    <input 
-        type="file" 
-        accept=".json" 
-        onChange={importDatabase} 
-        className="hidden" 
-        ref={fileInputRef} 
-    />
+<input 
+    type="file" 
+    accept=".json" 
+    onChange={(event) => importDatabase(event, canImportData() ? 'import' : 'preview')} 
+    className="hidden" 
+    ref={fileInputRef} 
+/>
 
     {isAdmin && (
         <button 
@@ -1422,19 +1747,24 @@ const handleExport = () => {
         </button>
     )}
 
+{canExportBackupData() && (
     <button 
         onClick={exportDatabase}
         className="px-3 sm:px-5 py-2 sm:py-2.5 bg-slate-800 text-white rounded-xl text-[11px] sm:text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-1.5 sm:gap-2"
     >
-        <i className="fas fa-share-nodes"></i> 導出數據
+        <i className="fas fa-share-nodes"></i> 匯出資料
     </button>
+)}
 
+{(canImportData() || canLoadPreviewData()) && (
     <button 
         onClick={() => fileInputRef.current.click()}
         className="px-3 sm:px-5 py-2 sm:py-2.5 bg-slate-800 text-white rounded-xl text-[11px] sm:text-xs font-black hover:bg-slate-700 transition-all shadow-md flex items-center gap-1.5 sm:gap-2"
     >
-        <i className="fas fa-file-import"></i> 導入數據
+        <i className="fas fa-file-import"></i>
+        {isAdmin ? '匯入資料' : isEditor ? '載入資料' : '載入預覽'}
     </button>
+)}
 </div>
 
                                             <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
@@ -1474,7 +1804,7 @@ const handleExport = () => {
                                                             <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center shadow-lg bg-orange-400 text-white">
                                                                 <span className="text-xs sm:text-sm font-black tracking-tight">{index + 1}</span>
                                                             </div>
-                                                            {isAdmin && (
+                                                            {canEditLawMonitor() && (
                                                                 <div className="flex flex-col gap-1">
                                                                     <button 
                                                                         onClick={() => moveLaw(index, -1)}
@@ -1496,8 +1826,8 @@ const handleExport = () => {
 
                                                         <div className="flex flex-col min-w-0 flex-1">
                                                             <div className="flex items-center gap-3 flex-wrap mb-2.5">
-                                                                {isAdmin ? (
-                                                                    <div className="flex-1 flex flex-col gap-1">
+{canEditLawMonitor() ? (
+    <div className="flex-1 flex flex-col gap-1">
                                                                         <input 
                                                                             className="font-black text-slate-800 truncate text-xl admin-input"
                                                                             value={law.name}
@@ -1520,8 +1850,8 @@ const handleExport = () => {
                                                                     </div>
                                                                 )}
                                                                 
-                                                                {isAdmin ? (
-                                                                    <select 
+{canEditLawMonitor() ? (
+    <select 
                                                                         className="text-[10px] font-black bg-white text-blue-600 px-2 py-1 rounded-lg border border-blue-200 uppercase outline-none"
                                                                         value={law.type}
                                                                         onChange={(e) => updateLawField(law.id, 'type', e.target.value)}
@@ -1540,9 +1870,9 @@ const handleExport = () => {
                                                             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                                                                 <div className="flex flex-col min-w-[120px] sm:min-w-[140px]">
                                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">全國法規公佈日</span>
-                                                                    {isAdmin ? (
-                                                                        <input 
-                                                                            type="date"
+{canEditLawMonitor() ? (
+    <input 
+        type="date"
                                                                             className={`text-sm font-bold admin-input ${isLawDiff ? 'text-rose-600' : 'text-blue-600'}`}
                                                                             value={law.remoteDate}
                                                                             onChange={(e) => updateLawField(law.id, 'remoteDate', e.target.value)}
@@ -1554,7 +1884,7 @@ const handleExport = () => {
                                                                 <div className="w-px h-8 bg-slate-200 mx-6 hidden sm:block"></div>
                                                                 <div className="flex flex-col min-w-[120px] sm:min-w-[140px]">
                                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">最近鑑別/登錄日</span>
-                                                                    {isAdmin ? (
+                                                                    {canEditLawMonitor() ? (
                                                                         <input 
                                                                             type="date"
                                                                             className={`text-sm font-black admin-input ${isLawDiff ? 'text-rose-500' : 'text-emerald-700'}`}
@@ -1584,35 +1914,43 @@ const handleExport = () => {
                                                     </div>
 
                                                     <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:gap-4 shrink-0 ml-0 lg:ml-0">
-                                                        {isAdmin && (
-                                                            <button 
-                                                                onClick={() => removeLaw(law.id)}
+{canDeleteLawMonitor() && (
+    <button 
+        onClick={() => removeLaw(law.id)}
                                                                 className="w-full sm:w-12 h-11 sm:h-12 rounded-xl sm:rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
                                                                 title="移除此法規"
                                                             >
                                                                 <i className="fas fa-trash-alt"></i>
                                                             </button>
                                                         )}
-                                                        <button 
-                                                            onClick={() => startSync(law)} 
-                                                            className={`px-3 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${isLawDiff ? 'bg-rose-600 text-white shadow-xl shadow-rose-600/30 hover:bg-rose-700 animate-pulse border-none' : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'}`}
-                                                        >
-                                                            比對詳情
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleSingleSync(law.id)}
-                                                            className={`px-3 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm text-white shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ${isLawDiff ? 'bg-slate-300 shadow-none cursor-default text-slate-500' : 'bg-blue-600 shadow-blue-600/30 hover:bg-blue-700'}`}
-                                                            disabled={isLawDiff}
-                                                        >
-                                                            立即鑑別
-                                                        </button>
+{canViewCompareDetail() && (
+    <button 
+        onClick={() => startSync(law)} 
+        className={`px-3 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${isLawDiff ? 'bg-rose-600 text-white shadow-xl shadow-rose-600/30 hover:bg-rose-700 animate-pulse border-none' : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'}`}
+    >
+        比對詳情
+    </button>
+)}
+{canConfirmIdentification() && (
+    <button
+        onClick={() => handleSingleSync(law.id)}
+        className={`px-3 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm shadow-xl transition-all duration-200 transform active:scale-95 flex items-center justify-center ${
+            isLawDiff
+                ? 'bg-blue-600 text-white shadow-blue-600/30 hover:bg-blue-700 hover:scale-105'
+                : 'bg-slate-300 shadow-none cursor-default text-slate-500'
+        }`}
+        disabled={!isLawDiff}
+    >
+        立即鑑別
+    </button>
+)}
                                                     </div>
                                                 </div>
                                             );
                                         })}
-                                        {isAdmin && (
-                                            <button 
-                                                onClick={addNewLaw}
+{canAddLawMonitor() && (
+    <button 
+        onClick={addNewLaw}
                                                 className="w-full py-8 border-2 border-dashed border-slate-300 rounded-3xl text-slate-400 font-black flex flex-col items-center justify-center gap-3 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all"
                                             >
                                                 <i className="fas fa-plus-circle text-2xl"></i>
@@ -1649,19 +1987,25 @@ const handleExport = () => {
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-4 action-buttons w-full sm:w-auto">
-                                                    <button onClick={() => window.print()} className="px-3 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-slate-200 text-slate-600 font-black text-xs sm:text-base transition-all hover:bg-slate-50 active:scale-95">
-                                                        <i className="fas fa-print mr-2"></i> 列印報告
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSyncText('正在重新分析條文異動並更新鑑別紀錄...\n系統正在即時更新大數據資料庫紀錄...');
-                                                            handleSingleSync(selectedLaw.id);
-                                                            setActiveTab('monitor');
-                                                        }}
-                                                        className="px-3 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-blue-600 text-white font-black text-xs sm:text-base shadow-xl hover:bg-blue-700 transition-all active:scale-95"
-                                                    >
-                                                        確認鑑別並更新日期
-                                                    </button>
+{canPrintReport() && (
+    <button
+        onClick={() => window.print()}
+        className="px-3 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-slate-200 text-slate-600 font-black text-xs sm:text-base transition-all hover:bg-slate-50 active:scale-95"
+    >
+        <i className="fas fa-print mr-2"></i> 列印報告
+    </button>
+)}
+{canConfirmIdentification() && selectedLaw && (
+    <button
+        onClick={() => {
+            handleSingleSync(selectedLaw.id);
+            setActiveTab('monitor');
+        }}
+        className="px-3 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-blue-600 text-white font-black text-xs sm:text-base shadow-xl hover:bg-blue-700 transition-all active:scale-95"
+    >
+        確認鑑別並更新日期
+    </button>
+)}
                                                 </div>
                                             </div>
                                         </div>
@@ -1691,9 +2035,9 @@ const handleExport = () => {
                                                         {currentLawData?.rows.map((row, idx) => (
                                                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                                                 <td className="px-8 py-6 text-center">
-                                                                    {isAdmin ? (
-                                                                        <button 
-                                                                            onClick={() => removeDetailRow(selectedLaw.id, idx)}
+{canDeleteDetailRows() ? (
+    <button 
+        onClick={() => removeDetailRow(selectedLaw.id, idx)}
                                                                             className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center row-action-btn"
                                                                         >
                                                                             <i className="fas fa-trash-alt"></i>
@@ -1703,13 +2047,13 @@ const handleExport = () => {
                                                                     )}
                                                                 </td>
                                                                 <td className="px-8 py-6 font-black text-blue-600">
-                                                                    {isAdmin ? (
+                                                                    {canEditDetailRows() ? (
                                                                         <input className="admin-input" value={row.no} onChange={(e) => updateDetailField(selectedLaw.id, idx, 'no', e.target.value)} />
                                                                     ) : row.no}
                                                                 </td>
                                                                 <td className="px-8 py-6">
                                                                     <div className="space-y-4">
-                                                                        {isAdmin ? (
+                                                                        {canEditDetailRows() ? (
                                                                             <div className="space-y-2">
                                                                                 <textarea 
                                                                                     className="w-full text-slate-400 text-sm bg-slate-50 p-3 rounded-lg border-l-4 border-slate-200 line-through outline-none" 
@@ -1731,7 +2075,7 @@ const handleExport = () => {
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-8 py-6">
-                                                                    {isAdmin ? (
+                                                                    {canEditDetailRows() ? (
                                                                         <input className="admin-input text-amber-700 font-black" value={row.note} onChange={(e) => updateDetailField(selectedLaw.id, idx, 'note', e.target.value)} />
                                                                     ) : (
                                                                         <span className="px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-xs font-black">{row.note}</span>
@@ -1739,8 +2083,8 @@ const handleExport = () => {
                                                                 </td>
                                                             </tr>
                                                         ))}
-                                                        {isAdmin && (
-                                                            <tr>
+{canAddDetailRows() && (
+    <tr>
                                                                 <td colSpan="4" className="p-6">
                                                                     <button 
                                                                         onClick={() => addDetailRow(selectedLaw.id)}
@@ -1764,7 +2108,7 @@ const handleExport = () => {
                         條號
                     </div>
                     <div className="text-base font-black text-blue-600 mt-1">
-                        {isAdmin ? (
+                        {canEditDetailRows() ? (
                             <input
                                 className="admin-input"
                                 value={row.no}
@@ -1779,7 +2123,7 @@ const handleExport = () => {
                         異動屬性
                     </div>
                     <div className="mt-1">
-                        {isAdmin ? (
+                        {canEditDetailRows() ? (
                             <input
                                 className="admin-input text-amber-700 font-black text-right"
                                 value={row.note}
@@ -1794,10 +2138,10 @@ const handleExport = () => {
                 </div>
             </div>
 
-            {isAdmin && (
-                <div className="mb-3">
-                    <button
-                        onClick={() => removeDetailRow(selectedLaw.id, idx)}
+{canDeleteDetailRows() && (
+    <div className="mb-3">
+        <button
+            onClick={() => removeDetailRow(selectedLaw.id, idx)}
                         className="w-full py-2 rounded-xl bg-rose-50 text-rose-500 text-xs font-black hover:bg-rose-500 hover:text-white transition-all row-action-btn"
                     >
                         <i className="fas fa-trash-alt mr-2"></i>
@@ -1812,7 +2156,7 @@ const handleExport = () => {
                         舊版條文
                     </div>
 
-                    {isAdmin ? (
+                    {canEditDetailRows() ? (
                         <textarea
                             className="w-full mobile-compare-old outline-none"
                             value={row.old}
@@ -1830,7 +2174,7 @@ const handleExport = () => {
                         新版條文
                     </div>
 
-                    {isAdmin ? (
+                    {canEditDetailRows() ? (
                         <textarea
                             className="w-full mobile-compare-new outline-none"
                             value={row.new}
@@ -1847,9 +2191,9 @@ const handleExport = () => {
         </div>
     ))}
 
-    {isAdmin && (
-        <button
-            onClick={() => addDetailRow(selectedLaw.id)}
+{canAddDetailRows() && (
+    <button
+        onClick={() => addDetailRow(selectedLaw.id)}
             className="w-full py-4 border border-dashed border-slate-300 rounded-xl text-slate-400 font-bold hover:bg-slate-50 transition-all"
         >
             <i className="fas fa-plus mr-2"></i>
@@ -1868,7 +2212,7 @@ const handleExport = () => {
                     <footer className="bg-slate-900 border-t border-slate-800 px-4 py-5 sm:px-10 sm:py-8 text-center space-y-3 sm:space-y-4 mobile-footer-tight">
                         <div className="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-8">
                             <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">
-                                © 2026 職業安全衛生室｜法規智慧鑑別系統
+                                © 職業安全衛生室｜法規智慧鑑別系統
                             </p>
                             <span className="hidden md:block text-slate-700">|</span>
                             <div className="flex items-center gap-3 bg-slate-800/50 px-5 py-2 rounded-xl border border-slate-700/50 shadow-inner">
