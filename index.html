@@ -756,23 +756,94 @@ if (e.key === 'Escape') {
 
 const exportDatabase = () => {
     if (!canExportBackupData()) {
-        alert('目前權限無法匯出資料。');
+        alert('請先登入使用者或管理者權限後再匯出資料。');
         return;
     }
 
     if (previewDataModeRef.current) {
-        alert('目前為預覽資料模式，請先重新載入正式資料後再匯出。');
+        alert('目前為預覽資料模式，請先以使用者或管理者身分正式載入資料後再匯出 JSON。');
         return;
     }
 
-    const dataStr = JSON.stringify({ laws, lawDetails }, null, 2);
-                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                const exportFileDefaultName = `職業安全法規鑑別系統_RIS_${new Date().toISOString().split('T')[0]}.json`;
-                const linkElement = document.createElement('a');
-                linkElement.setAttribute('href', dataUri);
-                linkElement.setAttribute('download', exportFileDefaultName);
-                linkElement.click();
-            };
+    const exportDate = new Date().toISOString().split('T')[0];
+
+    const exportData = {
+        version: "regulation-identification-system-json-v2",
+        exportType: "unified-data",
+        exportedAt: new Date().toISOString(),
+
+        laws,
+        lawDetails,
+
+        /*
+         * 統一版 JSON 不匯出：
+         * adminPassword
+         * editorPassword
+         * editorEnabled
+         */
+        config: {}
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    const exportFileDefaultName = `職安法規鑑別RIS_${exportDate}.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+
+    alert('JSON 資料已匯出，密碼與權限設定未包含在檔案內。');
+};
+
+const applyImportedRegulationData = (importedData) => {
+    let importedLaws = null;
+    let importedLawDetails = null;
+
+    /*
+     * 新版統一 JSON：
+     * {
+     *   version: "regulation-identification-system-json-v2",
+     *   exportType: "unified-data",
+     *   laws: [...],
+     *   lawDetails: {...}
+     * }
+     */
+    if (
+        importedData &&
+        importedData.version === "regulation-identification-system-json-v2" &&
+        Array.isArray(importedData.laws) &&
+        importedData.lawDetails
+    ) {
+        importedLaws = importedData.laws;
+        importedLawDetails = importedData.lawDetails;
+    }
+
+    /*
+     * 舊版 JSON：
+     * {
+     *   laws: [...],
+     *   lawDetails: {...}
+     * }
+     */
+    else if (
+        importedData &&
+        Array.isArray(importedData.laws) &&
+        importedData.lawDetails
+    ) {
+        importedLaws = importedData.laws;
+        importedLawDetails = importedData.lawDetails;
+    }
+
+    else {
+        throw new Error('無效的資料檔案格式。');
+    }
+
+    return {
+        laws: importedLaws,
+        lawDetails: importedLawDetails
+    };
+};
 
 const importDatabase = (event, mode = 'import') => {
     const file = event.target.files[0];
@@ -792,39 +863,53 @@ const importDatabase = (event, mode = 'import') => {
     }
 
     const reader = new FileReader();
+
     reader.onload = (e) => {
         try {
             const importedData = JSON.parse(e.target.result);
+            const parsedData = applyImportedRegulationData(importedData);
 
-            if (importedData.laws && importedData.lawDetails) {
-                if (mode === 'preview') {
-                    previewDataModeRef.current = true;
-                    setIsPreviewDataMode(true);
-                    setLaws(importedData.laws);
-                    setLawDetails(importedData.lawDetails);
-                    alert('預覽資料載入成功！此資料僅供預覽，不會覆蓋正式資料庫。');
-                    return;
-                }
+            if (mode === 'preview') {
+                /*
+                 * 預覽載入：
+                 * 只更新目前頁面狀態，不覆蓋 IndexedDB。
+                 * 密碼與權限設定不處理。
+                 */
+                previewDataModeRef.current = true;
+                setIsPreviewDataMode(true);
 
-const importLabel = isAdmin ? '匯入資料' : '載入資料';
+                setLaws(parsedData.laws);
+                setLawDetails(parsedData.lawDetails);
+
+                alert('預覽資料載入成功！此資料僅供預覽，不會覆蓋正式資料庫。');
+                return;
+            }
+
+            const importLabel = isAdmin ? '匯入資料' : '載入資料';
 
 if (confirm(`${importLabel}將覆蓋目前所有紀錄，確定要繼續嗎？`)) {
+    /*
+     * 正式載入 / 匯入：
+     * 使用同一份 JSON 正式覆蓋 laws / lawDetails。
+     * 不匯入、不覆蓋 adminPassword / editorPassword / editorEnabled。
+     */
     previewDataModeRef.current = false;
     setIsPreviewDataMode(false);
-    setLaws(importedData.laws);
-    setLawDetails(importedData.lawDetails);
+
+    setLaws(parsedData.laws);
+    setLawDetails(parsedData.lawDetails);
+
     alert(`${importLabel}成功！`);
 }
-            } else {
-                alert('無效的資料檔案格式。');
-            }
+
         } catch (err) {
             alert('檔案解析失敗：' + err.message);
+        } finally {
+            event.target.value = '';
         }
     };
 
     reader.readAsText(file);
-    event.target.value = '';
 };
 
 const handleLogin = async () => {
