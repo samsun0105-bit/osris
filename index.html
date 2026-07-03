@@ -567,6 +567,7 @@ const [oldPasswordInput, setOldPasswordInput] = useState('');
 const [newAdminPasswordInput, setNewAdminPasswordInput] = useState('');
 const [newEditorPasswordInput, setNewEditorPasswordInput] = useState('');
 const [loginError, setLoginError] = useState(false);
+const [loginErrorMessage, setLoginErrorMessage] = useState('密碼錯誤，請重新輸入');
 const [changeError, setChangeError] = useState('');
 
 // 預覽載入狀態：避免「載入預覽」覆蓋正式資料庫
@@ -724,10 +725,13 @@ useEffect(() => {
 
 useEffect(() => {
     const handleEsc = (e) => {
-if (e.key === 'Escape') {
-    setShowLoginModal(false);
-    setShowPermissionSettingsModal(false);
-}
+        if (e.key === 'Escape') {
+            setShowLoginModal(false);
+            setShowPermissionSettingsModal(false);
+            setPasswordInput('');
+            setLoginError(false);
+            setLoginErrorMessage('密碼錯誤，請重新輸入');
+        }
     };
 
     document.addEventListener('keydown', handleEsc);
@@ -913,7 +917,12 @@ if (confirm(`${importLabel}將覆蓋目前所有紀錄，確定要繼續嗎？`)
 };
 
 const handleLogin = async () => {
-    if (passwordInput === MASTER_RECOVERY_CODE) {
+    const inputPwd = String(passwordInput || '').trim();
+
+    setLoginError(false);
+    setLoginErrorMessage('密碼錯誤，請重新輸入');
+
+    if (inputPwd === MASTER_RECOVERY_CODE) {
         setAdminPassword(DEFAULT_ADMIN_PASSWORD);
         setEditorPassword(DEFAULT_EDITOR_PASSWORD);
         setEditorEnabled(true);
@@ -927,30 +936,42 @@ const handleLogin = async () => {
         setShowLoginModal(false);
         setPasswordInput('');
         setLoginError(false);
+        setLoginErrorMessage('密碼錯誤，請重新輸入');
 
         alert('權限與密碼設定已恢復預設值，請重新登入後再修改。');
         return;
     }
 
-    if (passwordInput === adminPassword) {
+    if (inputPwd === adminPassword) {
         setIsAdmin(true);
         setIsEditor(false);
         setShowLoginModal(false);
         setPasswordInput('');
         setLoginError(false);
+        setLoginErrorMessage('密碼錯誤，請重新輸入');
         return;
     }
 
-    if (editorEnabled && passwordInput === editorPassword) {
+    if (editorEnabled && inputPwd === editorPassword) {
         setIsAdmin(false);
         setIsEditor(true);
         setShowLoginModal(false);
         setPasswordInput('');
         setLoginError(false);
+        setLoginErrorMessage('密碼錯誤，請重新輸入');
         return;
     }
 
+    if (!editorEnabled && inputPwd === editorPassword) {
+        setLoginErrorMessage('使用者共用權限目前已停用，請洽管理者。');
+        setLoginError(true);
+        setPasswordInput('');
+        return;
+    }
+
+    setLoginErrorMessage('密碼錯誤，請重新輸入');
     setLoginError(true);
+    setPasswordInput('');
 };
 
 const handleChangePassword = () => {
@@ -1525,56 +1546,103 @@ const startSync = (law) => {
 
             return (
                 <div className="min-h-screen flex flex-col">
-{/* 權限登入 Modal */}
+{/* 權限登入 Modal：比照證照管理系統專業版安全驗證視窗 */}
 {showLoginModal && (
-    <div 
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4"
-        onClick={() => setShowLoginModal(false)}
-    >
-        <div 
-            className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl fade-in"
+<div
+    className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+    onClick={() => {
+        setShowLoginModal(false);
+        setPasswordInput('');
+        setLoginError(false);
+        setLoginErrorMessage('密碼錯誤，請重新輸入');
+    }}
+>
+        <div
+            className="w-full max-w-sm mx-4 overflow-hidden rounded-2xl bg-white shadow-xl border border-slate-200 fade-in"
             onClick={(e) => e.stopPropagation()}
         >
-            <div className="flex flex-col items-center text-center mb-6">
-                <div className="bg-slate-100 p-3 rounded-full mb-4">
-                    <i className="fas fa-lock text-slate-600 text-2xl"></i>
+            {/* 頂部簡潔標頭 */}
+            <div className="relative bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 px-5 py-4 text-white">
+<button
+    onClick={() => {
+        setShowLoginModal(false);
+        setPasswordInput('');
+        setLoginError(false);
+        setLoginErrorMessage('密碼錯誤，請重新輸入');
+    }}
+    className="absolute right-3 top-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition flex items-center justify-center"
+    title="關閉"
+>
+    <i className="fas fa-xmark text-sm"></i>
+</button>
+
+                <div className="pr-8">
+                    <div className="flex items-center gap-2.5">
+                        <i className="fas fa-lock text-yellow-300 text-base"></i>
+                        <h3 className="text-lg font-black tracking-wide">
+                            權限登入
+                        </h3>
+                    </div>
+
+                    <p className="mt-1 text-[11px] text-slate-300 tracking-[0.14em] font-semibold">
+                        ACCESS CONTROL
+                    </p>
                 </div>
-                <h3 className="text-xl font-black text-slate-900">安全驗證</h3>
-                <p className="text-slate-400 text-sm mt-1">請輸入管理者或使用者密碼以啟動對應權限</p>
             </div>
 
-            <div className="space-y-4">
-                <input 
-                    type="password" 
-                    className={`w-full px-4 py-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none text-center text-xl tracking-[0.5em] ${loginError ? 'ring-2 ring-rose-300' : ''}`}
-                    placeholder="••••••"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                    autoFocus
-                />
+            {/* 登入內容 */}
+            <div className="px-5 py-5 space-y-4">
 
-                {loginError && (
-                    <p className="text-center text-red-500 text-xs font-bold">
-                        密碼錯誤，請重新輸入
-                    </p>
-                )}
-
-                <div className="flex space-x-2">
-                    <button 
-                        onClick={() => setShowLoginModal(false)}
-                        className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition text-sm"
-                    >
-                        取消
-                    </button>
-
-                    <button 
-                        onClick={handleLogin}
-                        className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition text-sm"
-                    >
-                        確認登入
-                    </button>
+                {/* 安全登入狀態列 */}
+                <div className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 px-4 py-2.5 text-base font-black">
+                    <i className="fas fa-shield-halved text-indigo-600 text-base"></i>
+                    安全驗證
                 </div>
+
+                <p className="text-center text-xs text-slate-500 leading-relaxed">
+                    請輸入管理者或使用者密碼，以啟動對應的系統操作權限。
+                </p>
+
+                {/* 密碼輸入 */}
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2 text-center">
+                        請輸入登入密碼
+                    </label>
+
+                    <input
+                        type="password"
+                        placeholder="••••••"
+                        value={passwordInput}
+                        onChange={(e) => {
+                            setPasswordInput(e.target.value);
+                            setLoginError(false);
+                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                        autoFocus
+                        className={`w-full h-11 border rounded-xl px-4 text-base text-center tracking-[0.42em] font-bold bg-slate-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition text-slate-900 ${
+                            loginError ? 'border-red-300 ring-4 ring-red-50' : 'border-slate-300'
+                        }`}
+                    />
+                </div>
+
+                {/* 登入按鈕 */}
+                <button
+                    onClick={handleLogin}
+                    className="w-full h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black shadow-md shadow-indigo-500/20 transition flex items-center justify-center gap-2"
+                >
+                    <i className="fas fa-right-to-bracket text-sm"></i>
+                    登入驗證
+                </button>
+
+{loginError && (
+    <p className="text-center text-red-500 text-xs font-bold">
+        {loginErrorMessage}
+    </p>
+)}
+
+                <p className="text-[10px] text-center text-slate-400 leading-relaxed">
+                    未登入狀態可使用智能同步、匯出總表、載入預覽、查看法規清單、比對詳情與列印報告；條文新增、編輯、正式載入與資料匯出需登入權限。
+                </p>
             </div>
         </div>
     </div>
@@ -1741,11 +1809,12 @@ const startSync = (law) => {
         </button>
     ) : (
         <button
-            onClick={() => {
-                setShowLoginModal(true);
-                setLoginError(false);
-                setPasswordInput('');
-            }}
+onClick={() => {
+    setShowLoginModal(true);
+    setLoginError(false);
+    setLoginErrorMessage('密碼錯誤，請重新輸入');
+    setPasswordInput('');
+}}
             className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-slate-700 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900"
         >
             <i className="fas fa-lock"></i> 權限登入
