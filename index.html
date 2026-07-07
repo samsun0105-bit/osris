@@ -113,6 +113,146 @@
     text-align: right;
 }
 
+/* 鑑別工作台視覺比例優化 */
+
+.workbench-header-layout {
+    align-items: flex-end;
+}
+
+.workbench-title-zone {
+    flex: 1 1 auto;
+    max-width: 760px;
+    padding-left: 0.25rem;
+}
+
+.action-buttons {
+    flex: 0 0 auto;
+}
+
+.workbench-kicker {
+    padding: 0.45rem 1rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+}
+
+.workbench-kicker i {
+    font-size: 0.9rem;
+}
+
+.workbench-title {
+    font-size: 1.85rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+}
+
+.workbench-date-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.workbench-date-card {
+    min-width: 150px;
+    padding: 0.65rem 1rem;
+}
+
+.workbench-date-label {
+    font-size: 0.72rem;
+    line-height: 1.1;
+}
+
+.workbench-date-value {
+    font-size: 0.95rem;
+    line-height: 1.25;
+}
+
+.workbench-action-btn {
+    min-height: 44px;
+    padding: 0.72rem 1.35rem;
+    font-size: 0.88rem;
+    border-radius: 1rem;
+}
+
+.compare-summary-box {
+    padding: 1.15rem 1.35rem;
+    gap: 1rem;
+    border-radius: 1.5rem;
+}
+
+.compare-summary-icon {
+    width: 3rem;
+    height: 3rem;
+}
+
+.compare-summary-icon i {
+    font-size: 1.45rem;
+}
+
+.compare-summary-title {
+    font-size: 1rem;
+    line-height: 1.3;
+}
+
+.compare-summary-text {
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.compare-table {
+    table-layout: fixed;
+}
+
+.compare-table th {
+    padding: 1rem 1.25rem;
+    font-size: 0.76rem;
+    line-height: 1.35;
+}
+
+.compare-table td {
+    padding: 1.15rem 1.25rem;
+}
+
+.compare-delete-btn {
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 0.85rem;
+}
+
+.admin-textarea-compact {
+    width: 100%;
+    min-height: 38px;
+    resize: vertical;
+    overflow: auto;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    background: transparent;
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.65rem;
+    padding: 0.45rem 0.55rem;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.admin-textarea-compact:focus {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+.law-monitor-input {
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.65rem;
+    padding: 0.35rem 0.55rem;
+    background: rgba(255, 255, 255, 0.75);
+}
+
+.law-monitor-input:focus {
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
         /* 手機版專用：只在 640px 以下生效，不影響桌機 */
         @media screen and (max-width: 640px) {
             body {
@@ -122,6 +262,124 @@
             .mobile-hide {
                 display: none !important;
             }
+
+            header {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+}
+
+header > div:first-child {
+    align-items: flex-start !important;
+}
+
+header > div:first-child .bg-blue-600 {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 14px !important;
+}
+
+header h1 {
+    font-size: 18px !important;
+    line-height: 1.2 !important;
+}
+
+header .mobile-hide.sm\:block {
+    display: block !important;
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.08em !important;
+    margin-top: 3px !important;
+    max-width: 270px;
+    white-space: normal;
+}
+
+header .text-emerald-400 {
+    font-size: 10px !important;
+    margin-top: 5px !important;
+    letter-spacing: 0.08em !important;
+}
+
+header > div:last-child {
+    gap: 8px !important;
+}
+
+.time-display-box {
+    align-self: flex-end;
+    margin-top: -2px;
+    padding: 0 !important;
+    min-width: 86px;
+}
+
+.time-mobile-date,
+.time-mobile-clock {
+    font-size: 9.5px;
+    line-height: 1.1;
+}
+
+header .grid.grid-cols-2 {
+    gap: 7px !important;
+}
+
+header button {
+    min-height: 36px !important;
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+}
+
+.workbench-card > div:first-child {
+    padding: 16px !important;
+}
+
+.workbench-card > div:first-child > div {
+    gap: 14px !important;
+}
+
+.workbench-card .space-y-5 {
+    width: 100%;
+}
+
+.workbench-kicker {
+    font-size: 0.72rem;
+    padding: 0.42rem 0.85rem;
+}
+
+.workbench-title {
+    font-size: 1.35rem;
+    line-height: 1.3;
+}
+
+.workbench-date-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px !important;
+    width: 100%;
+}
+
+.workbench-date-card {
+    min-width: 0;
+    padding: 0.6rem 0.7rem;
+}
+
+.workbench-date-label {
+    font-size: 0.65rem;
+}
+
+.workbench-date-value {
+    font-size: 0.82rem;
+}
+
+.action-buttons {
+    grid-template-columns: 1fr 1fr !important;
+    align-items: stretch;
+}
+
+.workbench-action-btn {
+    width: 100%;
+    min-height: 38px;
+    padding: 0.65rem 0.7rem;
+    font-size: 0.78rem;
+    border-radius: 0.9rem;
+}
 
             .main-container {
                 padding: 14px !important;
@@ -167,9 +425,11 @@
     flex-direction: column;
     align-items: flex-end;
     justify-content: center;
-    min-width: 92px;
-    padding: 4px 0;
-    line-height: 1.15;
+    align-self: flex-end;
+    margin-top: -2px;
+    min-width: 86px;
+    padding: 0 !important;
+    line-height: 1.12;
 }
 
 .time-desktop {
@@ -181,7 +441,8 @@
     display: block !important;
     color: #94a3b8;
     font-weight: 900;
-    font-size: 10px;
+    font-size: 9.5px;
+    line-height: 1.1;
     letter-spacing: 0.08em;
     font-variant-numeric: tabular-nums;
 }
@@ -488,8 +749,8 @@
     text-align: center !important;
 }
 
-/* 日期列：只套用在標題文字區內的日期區塊，不影響右側 action-buttons */
-.workbench-card > div:first-child .space-y-5 > .grid.grid-cols-2 {
+/* 日期列：新版 workbench-date-grid */
+.workbench-card .workbench-date-grid {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
@@ -497,8 +758,8 @@
     width: 100% !important;
 }
 
-/* 日期框本身 */
-.workbench-card .px-4.py-2.bg-white {
+/* 日期框本身：新版 workbench-date-card */
+.workbench-card .workbench-date-card {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -512,8 +773,8 @@
     text-align: center !important;
 }
 
-/* 日期框標籤：最新公佈日：、最近鑑別/登錄日： */
-.workbench-card .px-4.py-2.bg-white span:first-child {
+/* 日期框標籤 */
+.workbench-card .workbench-date-label {
     display: inline !important;
     color: #475569 !important;
     font-size: 11px !important;
@@ -522,12 +783,12 @@
 }
 
 /* 列印時在日期標籤後方補上冒號 */
-.workbench-card .px-4.py-2.bg-white span:first-child::after {
+.workbench-card .workbench-date-label::after {
     content: "：";
 }
 
 /* 日期框日期文字 */
-.workbench-card .px-4.py-2.bg-white span:last-child {
+.workbench-card .workbench-date-value {
     display: inline !important;
     font-size: 13px !important;
     font-weight: 900 !important;
@@ -2372,30 +2633,40 @@ onClick={() => {
                                     
                                     <div className="bg-white rounded-3xl sm:rounded-[3rem] shadow-xl sm:shadow-2xl border border-slate-200 overflow-hidden workbench-card mobile-workbench-tight">
                                         <div className="p-4 sm:p-12 border-b border-slate-100 bg-slate-50/50 mobile-section-tight">
-                                            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
-                                                <div className="space-y-5">
-                                                    <div className="inline-flex items-center gap-2.5 bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full text-[11px] font-black uppercase">
-                                                        <i className="fas fa-microchip"></i> 鑑別工作台
-                                                    </div>
-                                                    <h2 className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tight leading-tight">{selectedLaw?.name}</h2>
-                                                    <div className="grid grid-cols-1 sm:flex gap-2 sm:gap-6">
-                                                        <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
-                                                            <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1">最新公佈日</span>
-                                                            <span className={`text-sm font-black ${checkLawDiff(selectedLaw?.remoteDate, selectedLaw?.localCheckDate) ? 'text-rose-600' : 'text-slate-700'}`}>
-                                                                {selectedLaw?.remoteDate}
-                                                            </span>
-                                                        </div>
-                                                        <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
-                                                            <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1">最近鑑別/登錄日</span>
-                                                            <span className="text-sm font-black text-emerald-600">{selectedLaw?.localCheckDate}</span>
-                                                        </div>
+                                            <div className="workbench-header-layout flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-10">
+                                                <div className="workbench-title-zone space-y-5">
+<div className="workbench-kicker inline-flex items-center gap-2.5 bg-blue-100 text-blue-700 rounded-full font-black uppercase">
+    <i className="fas fa-microchip"></i> 鑑別工作台
+</div>
+
+<h2 className="workbench-title font-black text-slate-800">
+    {selectedLaw?.name}
+</h2>
+
+<div className="workbench-date-grid">
+<div className="workbench-date-card bg-white border border-slate-200 rounded-xl shadow-sm">
+    <span className="workbench-date-label font-bold text-slate-400 block uppercase mb-1">
+        最新公佈日
+    </span>
+    <span className={`workbench-date-value font-black ${checkLawDiff(selectedLaw?.remoteDate, selectedLaw?.localCheckDate) ? 'text-rose-600' : 'text-slate-700'}`}>
+        {selectedLaw?.remoteDate}
+    </span>
+</div>
+<div className="workbench-date-card bg-white border border-slate-200 rounded-xl shadow-sm">
+    <span className="workbench-date-label font-bold text-slate-400 block uppercase mb-1">
+        最近鑑別/登錄日
+    </span>
+    <span className="workbench-date-value font-black text-emerald-600">
+        {selectedLaw?.localCheckDate}
+    </span>
+</div>
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-4 action-buttons w-full sm:w-auto">
 {canPrintReport() && (
     <button
         onClick={() => window.print()}
-        className="px-3 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-slate-200 text-slate-600 font-black text-xs sm:text-base transition-all hover:bg-slate-50 active:scale-95"
+        className="workbench-action-btn bg-white border border-slate-200 text-slate-600 font-black transition-all hover:bg-slate-50 active:scale-95"
     >
         <i className="fas fa-print mr-2"></i> 列印報告
     </button>
@@ -2407,7 +2678,7 @@ onClick={() => {
             handleSingleSync(selectedLaw.id, { returnToMonitor: true });
         }}
         disabled={selectedLawCheckedToday}
-        className={`px-3 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-base shadow-xl transition-all active:scale-95 ${
+        className={`workbench-action-btn font-black shadow-xl transition-all active:scale-95 ${
             selectedLawCheckedToday
                 ? 'bg-slate-300 text-slate-500 shadow-none cursor-default'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -2426,24 +2697,36 @@ onClick={() => {
                                         </div>
                                         
                                         <div className="p-4 sm:p-12 space-y-4 sm:space-y-12 bg-white mobile-section-tight">
-                                            <div className="flex items-start sm:items-center gap-3 sm:gap-6 p-4 sm:p-8 bg-emerald-50 border border-emerald-100 rounded-2xl sm:rounded-3xl">
-                                                <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-inner">
-                                                    <i className="fas fa-check-circle text-xl sm:text-3xl"></i>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <h4 className="text-lg font-black text-emerald-900">自動比對完成</h4>
-                                                    <p className="text-emerald-700 font-medium">系統已完成與全國法規資料庫之最新條文比對，下方列出本次異動細節：</p>
-                                                </div>
-                                            </div>
+<div className="compare-summary-box flex items-start sm:items-center bg-emerald-50 border border-emerald-100">
+    <div className="compare-summary-icon rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-inner">
+        <i className="fas fa-check-circle"></i>
+    </div>
+    <div className="space-y-1.5">
+        <h4 className="compare-summary-title font-black text-emerald-900">
+            自動比對完成
+        </h4>
+        <p className="compare-summary-text text-emerald-700 font-medium">
+            系統已完成與全國法規資料庫之最新條文比對，下方列出本次異動細節：
+        </p>
+    </div>
+</div>
 
 <div className="desktop-compare-table overflow-hidden border border-slate-200 rounded-2xl sm:rounded-3xl shadow-sm">
-    <table className="w-full text-left border-collapse">
+    <table className="compare-table w-full text-left border-collapse">
                                                     <thead>
                                                         <tr className="bg-slate-50 border-b border-slate-200">
-                                                            <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-24 text-center">操作</th>
-                                                            <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-32">條號</th>
-                                                            <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">條文比對 (舊版 vs 新版)</th>
-                                                            <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-40">異動屬性</th>
+<th className="font-black text-slate-500 uppercase tracking-widest w-20 text-center">
+    操作
+</th>
+<th className="font-black text-slate-500 uppercase tracking-widest w-36">
+    條號
+</th>
+<th className="font-black text-slate-500 uppercase tracking-widest">
+    條文比對 (舊版 vs 新版)
+</th>
+<th className="font-black text-slate-500 uppercase tracking-widest w-44">
+    異動屬性
+</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100">
@@ -2453,7 +2736,7 @@ onClick={() => {
 {canDeleteDetailRows() ? (
     <button 
         onClick={() => removeDetailRow(selectedLaw.id, idx)}
-                                                                            className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center row-action-btn"
+                                                                            className="compare-delete-btn bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center row-action-btn"
                                                                         >
                                                                             <i className="fas fa-trash-alt"></i>
                                                                         </button>
@@ -2462,9 +2745,15 @@ onClick={() => {
                                                                     )}
                                                                 </td>
                                                                 <td className="px-8 py-6 font-black text-blue-600">
-                                                                    {canEditDetailRows() ? (
-                                                                        <input className="admin-input" value={row.no} onChange={(e) => updateDetailField(selectedLaw.id, idx, 'no', e.target.value)} />
-                                                                    ) : row.no}
+{canEditDetailRows() ? (
+    <textarea
+        className="admin-textarea-compact text-blue-600 font-black"
+        value={row.no}
+        onChange={(e) => updateDetailField(selectedLaw.id, idx, 'no', e.target.value)}
+    />
+) : (
+    <span className="break-words">{row.no}</span>
+)}
                                                                 </td>
                                                                 <td className="px-8 py-6">
                                                                     <div className="space-y-4">
@@ -2490,11 +2779,17 @@ onClick={() => {
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-8 py-6">
-                                                                    {canEditDetailRows() ? (
-                                                                        <input className="admin-input text-amber-700 font-black" value={row.note} onChange={(e) => updateDetailField(selectedLaw.id, idx, 'note', e.target.value)} />
-                                                                    ) : (
-                                                                        <span className="px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-xs font-black">{row.note}</span>
-                                                                    )}
+{canEditDetailRows() ? (
+    <textarea
+        className="admin-textarea-compact text-amber-700 font-black"
+        value={row.note}
+        onChange={(e) => updateDetailField(selectedLaw.id, idx, 'note', e.target.value)}
+    />
+) : (
+    <span className="inline-block px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-xs font-black break-words">
+        {row.note}
+    </span>
+)}
                                                                 </td>
                                                             </tr>
                                                         ))}
@@ -2524,11 +2819,11 @@ onClick={() => {
                     </div>
                     <div className="text-base font-black text-blue-600 mt-1">
                         {canEditDetailRows() ? (
-                            <input
-                                className="admin-input"
-                                value={row.no}
-                                onChange={(e) => updateDetailField(selectedLaw.id, idx, 'no', e.target.value)}
-                            />
+<textarea
+    className="admin-textarea-compact text-blue-600 font-black"
+    value={row.no}
+    onChange={(e) => updateDetailField(selectedLaw.id, idx, 'no', e.target.value)}
+/>
                         ) : row.no}
                     </div>
                 </div>
@@ -2539,11 +2834,11 @@ onClick={() => {
                     </div>
                     <div className="mt-1">
                         {canEditDetailRows() ? (
-                            <input
-                                className="admin-input text-amber-700 font-black text-right"
-                                value={row.note}
-                                onChange={(e) => updateDetailField(selectedLaw.id, idx, 'note', e.target.value)}
-                            />
+<textarea
+    className="admin-textarea-compact text-amber-700 font-black"
+    value={row.note}
+    onChange={(e) => updateDetailField(selectedLaw.id, idx, 'note', e.target.value)}
+/>
                         ) : (
                             <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-black">
                                 {row.note}
