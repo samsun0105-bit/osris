@@ -263,9 +263,9 @@
                 display: none !important;
             }
 
-            header {
-    padding: 12px 14px !important;
-    gap: 10px !important;
+header {
+    padding: 10px 14px 12px 14px !important;
+    gap: 6px !important;
 }
 
 header > div:first-child {
@@ -324,6 +324,87 @@ header button {
     min-height: 36px !important;
     padding-top: 7px !important;
     padding-bottom: 7px !important;
+}
+
+@media screen and (max-width: 640px) and (orientation: portrait) {
+header {
+    position: relative;
+    padding: 10px 14px 12px 14px !important;
+    gap: 6px !important;
+}
+
+    header > div:first-child {
+        width: 100%;
+        display: grid !important;
+        grid-template-columns: auto 1fr auto;
+        align-items: center !important;
+        gap: 10px !important;
+    }
+
+    header > div:first-child .bg-blue-600 {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 13px !important;
+    }
+
+    header > div:first-child .bg-blue-600 i {
+        font-size: 20px !important;
+    }
+
+    header h1 {
+        font-size: 17px !important;
+        line-height: 1.15 !important;
+        white-space: nowrap;
+    }
+
+    header .mobile-hide.sm\:block {
+        display: none !important;
+    }
+
+    header .text-emerald-400 {
+        display: none !important;
+    }
+
+    .header-action-zone {
+        gap: 6px !important;
+        margin-top: -2px !important;
+    }
+
+    .time-display-box {
+        position: absolute;
+        top: 13px;
+        right: 14px;
+        margin-top: 0 !important;
+        min-width: auto !important;
+        padding: 0 !important;
+        line-height: 1.05;
+        text-align: right;
+    }
+
+    .time-mobile-date,
+    .time-mobile-clock {
+        font-size: 9px !important;
+        line-height: 1.05 !important;
+        letter-spacing: 0.06em !important;
+    }
+
+    .time-mobile-clock {
+        margin-top: 1px !important;
+    }
+
+    header .grid.grid-cols-2 {
+        width: 100% !important;
+        gap: 7px !important;
+        margin-top: 0 !important;
+    }
+
+    header button {
+        min-height: 34px !important;
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+        border-radius: 11px !important;
+        font-size: 11px !important;
+    }
 }
 
 .workbench-card > div:first-child {
@@ -2259,7 +2340,7 @@ const selectedLawCheckedToday =
                             </div>
                         </div>
 
-                        <div className="flex flex-col items-stretch sm:items-end gap-3">
+                        <div className="header-action-zone flex flex-col items-stretch sm:items-end gap-3">
 <div className="time-display-box">
     <span className="time-desktop text-slate-400 font-black text-xs tracking-widest tabular-nums opacity-90">
         {formatTime(currentTime)}
