@@ -1191,7 +1191,7 @@ const savedEditorEnabled = await dbManager.get('editor_enabled');
                                 { id: 17, pcode: 'J0160009', name: '游離輻射防護法', type: '法律', remoteDate: '2002-01-30', localCheckDate: UNIFIED_INITIAL_DATE },
                                 { id: 18, pcode: 'J0160022', name: '游離輻射防護施行細則', type: '法規命令', remoteDate: '2008-02-22', localCheckDate: UNIFIED_INITIAL_DATE },
                                 { id: 19, pcode: 'J0160004', name: '游離輻射防護安全標準', type: '法規命令', remoteDate: '2005-12-30', localCheckDate: UNIFIED_INITIAL_DATE },
-                                { id: 20, pcode: 'J0160025', name: '放射性物質與可發生游離輻射設備及其輻輻射作業管理辦法', type: '法規命令', remoteDate: '2018-12-22', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 20, pcode: 'J0160025', name: '放射性物質與可發生游離輻射設備及其輻射作業管理辦法', type: '法規命令', remoteDate: '2018-12-22', localCheckDate: UNIFIED_INITIAL_DATE },
                                 { id: 21, pcode: 'J0160042', name: '放射性物質或可發生游離輻射設備操作人員管理辦法', type: '法規命令', remoteDate: '2009-04-17', localCheckDate: UNIFIED_INITIAL_DATE },
                                 { id: 22, pcode: 'N0030011', name: '事業單位僱用女性勞工夜間工作場所必要之安全衛生設施標準', type: '法規命令', remoteDate: '2015-03-31', localCheckDate: UNIFIED_INITIAL_DATE },
                                 { id: 23, pcode: 'N0060034', name: '機械設備器具安全標準', type: '法規命令', remoteDate: '2022-05-11', localCheckDate: UNIFIED_INITIAL_DATE },
@@ -1685,55 +1685,243 @@ const handleAllSync = async () => {
     setSyncText('智能同步執行中');
     setIsSyncing(true);
 
-try {
-    // 建立控制器（用來中斷請求）
     const controller = new AbortController();
 
-    // 設定60秒後自動中止，避免外部法規資料庫偶發延遲造成同步失敗
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    // 維持你原本決定的 60 秒逾時
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, 60000);
 
-    // 發送請求（帶入 signal）
-    const response = await fetch('/api/sync-laws', {
-        signal: controller.signal
-    });
+    try {
+        const response = await fetch(
+            `/api/sync-laws?_=${Date.now()}`,
+            {
+                method: 'GET',
+                signal: controller.signal,
+                cache: 'no-store',
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            }
+        );
 
-    // 請求完成 → 取消 timeout
-    clearTimeout(timeoutId);
+        const responseText = await response.text();
 
-    const result = await response.json();
+        let result;
 
-        if (!response.ok || !result.success) {
-            throw new Error(result.error || '法規同步失敗');
+        try {
+            result = JSON.parse(responseText);
+        } catch (parseError) {
+            throw new Error(
+                `後端未回傳有效 JSON。HTTP ${response.status}：` +
+                responseText.slice(0, 200)
+            );
         }
 
-        const syncData = result.data || [];
+        if (!response.ok) {
+            throw new Error(
+                result.error ||
+                `後端回應錯誤：HTTP ${response.status}`
+            );
+        }
+
+        const syncData = Array.isArray(result.data)
+            ? result.data
+            : [];
+
+        /*
+         * 只接受：
+         * 1. 有 Pcode
+         * 2. 有 LastUpdate
+         * 3. 日期格式為 YYYY-MM-DD
+         */
+        const validSyncData = syncData.filter(item => {
+            return (
+                item &&
+                item.Pcode &&
+                /^\d{4}-\d{2}-\d{2}$/.test(
+                    String(item.LastUpdate || '')
+                )
+            );
+        });
+
+        if (validSyncData.length === 0) {
+            const firstError =
+                result.failedItems?.[0]?.Error ||
+                syncData.find(item => item?.Error)?.Error ||
+                result.error ||
+                '後端沒有取得任何有效法規日期';
+
+            throw new Error(firstError);
+        }
+
+        /*
+         * 先計算更新結果，避免在 setLaws updater
+         * 中直接修改外部計數變數。
+         */
+        let updatedCount = 0;
+        let unchangedCount = 0;
+        let unmatchedCount = 0;
+
+        const normalizedSyncMap = new Map(
+            validSyncData.map(item => [
+                String(item.Pcode)
+                    .trim()
+                    .toUpperCase(),
+                item
+            ])
+        );
 
         setLaws(prevLaws => {
             return prevLaws.map(law => {
-                const match = syncData.find(item => item.Pcode === law.pcode);
+                const lawPcode = String(
+                    law.pcode || ''
+                )
+                    .trim()
+                    .toUpperCase();
 
-                if (match && match.LastUpdate) {
-                    return {
-                        ...law,
-                        remoteDate: match.LastUpdate
-                    };
+                const match = normalizedSyncMap.get(
+                    lawPcode
+                );
+
+                if (!match) {
+                    unmatchedCount += 1;
+                    return law;
                 }
 
-                return law;
+                if (
+                    String(law.remoteDate || '') ===
+                    String(match.LastUpdate)
+                ) {
+                    unchangedCount += 1;
+                    return law;
+                }
+
+                updatedCount += 1;
+
+                return {
+                    ...law,
+                    remoteDate: match.LastUpdate
+                };
             });
         });
 
-        alert(`智能同步完成，共取得 ${result.count} 筆法規資料。`);
+        /*
+         * 若目前停留在鑑別工作台，
+         * 同步更新 selectedLaw，
+         * 避免工作台仍顯示同步前的舊日期。
+         */
+        setSelectedLaw(prevSelectedLaw => {
+            if (!prevSelectedLaw) {
+                return prevSelectedLaw;
+            }
 
-} catch (error) {
-    if (error.name === 'AbortError') {
-        alert('同步等候逾時，可能是全國法規資料庫暫時回應較慢，請稍後再試。');
-    } else {
-        alert('同步失敗：' + error.message);
+            const selectedPcode = String(
+                prevSelectedLaw.pcode || ''
+            )
+                .trim()
+                .toUpperCase();
+
+            const match = normalizedSyncMap.get(
+                selectedPcode
+            );
+
+            if (!match) {
+                return prevSelectedLaw;
+            }
+
+            return {
+                ...prevSelectedLaw,
+                remoteDate: match.LastUpdate
+            };
+        });
+
+        const successCount = Number(
+            result.successCount ??
+            validSyncData.length
+        );
+
+        const failedCount = Number(
+            result.failedCount ??
+            Math.max(
+                0,
+                syncData.length - validSyncData.length
+            )
+        );
+
+        let message =
+            `智能同步完成。\n\n` +
+            `監測法規：${result.count || syncData.length} 筆\n` +
+            `成功取得：${successCount} 筆\n` +
+            `日期更新：${updatedCount} 筆\n` +
+            `日期相同：${unchangedCount} 筆`;
+
+        if (unmatchedCount > 0) {
+            message +=
+                `\n前端未匹配：${unmatchedCount} 筆`;
+        }
+
+        if (failedCount > 0) {
+            const failedNames = (
+                Array.isArray(result.failedItems)
+                    ? result.failedItems
+                    : []
+            )
+                .slice(0, 8)
+                .map(item => {
+                    const lawName =
+                        item.Name ||
+                        item.Pcode ||
+                        '未知法規';
+
+                    const errorText =
+                        item.Error ||
+                        '未取得日期';
+
+                    return `${lawName}：${errorText}`;
+                })
+                .join('\n');
+
+            message +=
+                `\n同步失敗：${failedCount} 筆`;
+
+            if (failedNames) {
+                message +=
+                    `\n\n失敗項目：\n${failedNames}`;
+            }
+        }
+
+        alert(message);
+
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            alert(
+                '同步等候逾時。\n\n' +
+                '可能是全國法規資料庫暫時回應較慢，' +
+                '請稍後再試。'
+            );
+
+        } else {
+            console.error(
+                '法規智能同步失敗：',
+                error
+            );
+
+            alert(
+                '同步失敗：' +
+                (
+                    error.message ||
+                    '未知錯誤'
+                )
+            );
+        }
+
+    } finally {
+        clearTimeout(timeoutId);
+        setIsSyncing(false);
     }
-} finally {
-    setIsSyncing(false);
-}
 };
 
 const handleSingleSync = (lawId, options = {}) => {
