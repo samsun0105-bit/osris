@@ -19,7 +19,10 @@ HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/149.0.0.0 Safari/537.36"
     ),
-    "Accept": "application/xml,text/xml,text/html;q=0.9,*/*;q=0.8",
+    "Accept": (
+        "text/html,application/xhtml+xml,"
+        "application/xml;q=0.9,*/*;q=0.8"
+    ),
     "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
     "Cache-Control": "no-cache",
     "Pragma": "no-cache"
@@ -173,71 +176,154 @@ def normalize_law_date(raw_date):
 
 
 def get_law_date(pcode):
-    url = "https://law.moj.gov.tw/Service/GetOneLaw.aspx"
+    """
+    從全國法規資料庫公開法規頁面取得修正日期。
+    """
+    url = "https://law.moj.gov.tw/LawClass/LawAll.aspx"
     session = create_session()
 
     try:
         response = session.get(
             url,
             params={
-                "PCode": pcode
+                "pcode": pcode
             },
             headers=HEADERS,
-            timeout=(8, 20)
+            timeout=(8, 25),
+            allow_redirects=True
         )
 
         response.raise_for_status()
 
-        response_body = response.content
-
-        if not response_body:
+        if not response.content:
             raise ValueError(
                 "全國法規資料庫回傳空白內容"
             )
 
-        content_type = (
-            response.headers
-            .get("Content-Type", "")
-            .lower()
+        response.encoding = (
+            response.apparent_encoding or
+            response.encoding or
+            "utf-8"
         )
 
-        body_preview = response_body[:500].decode(
-            response.encoding or "utf-8",
-            errors="ignore"
-        ).lower()
+        html = response.text
 
-        if (
-            "text/html" in content_type
-            or "<!doctype html" in body_preview
-            or "<html" in body_preview
-        ):
+        if not html.strip():
             raise ValueError(
-                "全國法規資料庫回傳 HTML，而不是法規 XML"
+                "全國法規資料庫回傳空白網頁"
             )
 
-        root = ET.fromstring(response_body)
+        if "全國法規資料庫" not in html:
+            raise ValueError(
+                "回傳內容不是全國法規資料庫頁面"
+            )
 
-        raw_date = find_xml_text(
-            root,
-            [
-                "LawModifiedDate",
-                "LawModifyDate",
-                "ModifiedDate",
-                "LawDate"
-            ]
+        date_patterns = [
+            (
+                r"修正日期\s*[：:]?\s*"
+                r"(?:中華民國\s*)?"
+                r"(?:民國\s*)?"
+                r"(\d{2,4})\s*年\s*"
+                r"(\d{1,2})\s*月\s*"
+                r"(\d{1,2})\s*日"
+            ),
+            (
+                r"公布日期\s*[：:]?\s*"
+                r"(?:中華民國\s*)?"
+                r"(?:民國\s*)?"
+                r"(\d{2,4})\s*年\s*"
+                r"(\d{1,2})\s*月\s*"
+                r"(\d{1,2})\s*日"
+            ),
+            (
+                r"發布日期\s*[：:]?\s*"
+                r"(?:中華民國\s*)?"
+                r"(?:民國\s*)?"
+                r"(\d{2,4})\s*年\s*"
+                r"(\d{1,2})\s*月\s*"
+                r"(\d{1,2})\s*日"
+            )
+        ]
+
+        date_match = None
+
+        for pattern in date_patterns:
+            date_match = re.search(
+                pattern,
+                html,
+                flags=re.IGNORECASE
+            )
+
+            if date_match:
+                break
+
+        if not date_match:
+            compact_html = re.sub(
+                r"<[^>]+>",
+                " ",
+                html
+            )
+
+            compact_html = re.sub(
+                r"\s+",
+                " ",
+                compact_html
+            )
+
+            for pattern in date_patterns:
+                date_match = re.search(
+                    pattern,
+                    compact_html,
+                    flags=re.IGNORECASE
+                )
+
+                if date_match:
+                    break
+
+        if not date_match:
+            raise ValueError(
+                "法規頁面中找不到修正、公布或發布日期"
+            )
+
+        raw_year = int(date_match.group(1))
+        month = int(date_match.group(2))
+        day = int(date_match.group(3))
+
+        if raw_year < 1911:
+            year = raw_year + 1911
+            raw_date = (
+                f"民國{raw_year}年"
+                f"{month:02d}月"
+                f"{day:02d}日"
+            )
+        else:
+            year = raw_year
+            raw_date = (
+                f"{year}年"
+                f"{month:02d}月"
+                f"{day:02d}日"
+            )
+
+        if year < 1912 or year > 2200:
+            raise ValueError(
+                f"年份超出合理範圍：{year}"
+            )
+
+        if month < 1 or month > 12:
+            raise ValueError(
+                f"月份格式錯誤：{month}"
+            )
+
+        if day < 1 or day > 31:
+            raise ValueError(
+                f"日期格式錯誤：{day}"
+            )
+
+        normalized_date = (
+            f"{year:04d}-"
+            f"{month:02d}-"
+            f"{day:02d}"
         )
-
-        if not raw_date:
-            raise ValueError(
-                "XML 中找不到法規修正日期欄位"
-            )
-
-        normalized_date = normalize_law_date(raw_date)
-
-        if not normalized_date:
-            raise ValueError(
-                f"無法辨識法規日期格式：{raw_date}"
-            )
 
         return {
             "date": normalized_date,
@@ -260,29 +346,30 @@ def get_law_date(pcode):
             response_status = exc.response.status_code
 
             try:
-                response_preview = exc.response.text[:300]
+                response_preview = (
+                    exc.response.text[:300]
+                )
             except Exception:
                 response_preview = None
 
-        error_message = f"HTTP 請求失敗：{str(exc)}"
+        error_message = (
+            f"HTTP 請求失敗：{str(exc)}"
+        )
 
         if response_status is not None:
-            error_message += f"；狀態碼：{response_status}"
+            error_message += (
+                f"；狀態碼：{response_status}"
+            )
 
         if response_preview:
-            error_message += f"；回傳內容：{response_preview}"
+            error_message += (
+                f"；回傳內容：{response_preview}"
+            )
 
         return {
             "date": None,
             "rawDate": None,
             "error": error_message
-        }
-
-    except ET.ParseError as exc:
-        return {
-            "date": None,
-            "rawDate": None,
-            "error": f"XML 解析失敗：{str(exc)}"
         }
 
     except Exception as exc:
