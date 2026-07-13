@@ -177,14 +177,14 @@ def get_law_date(pcode):
     session = create_session()
 
     try:
-response = session.get(
-    url,
-    params={
-        "PCode": pcode
-    },
-    headers=HEADERS,
-    timeout=(8, 20)
-)
+        response = session.get(
+            url,
+            params={
+                "PCode": pcode
+            },
+            headers=HEADERS,
+            timeout=(8, 20)
+        )
 
         response.raise_for_status()
 
@@ -206,7 +206,6 @@ response = session.get(
             errors="ignore"
         ).lower()
 
-        # 防止網站回傳錯誤 HTML 頁面
         if (
             "text/html" in content_type
             or "<!doctype html" in body_preview
@@ -253,31 +252,31 @@ response = session.get(
             "error": "連線逾時"
         }
 
-except requests.RequestException as exc:
-    response_status = None
-    response_preview = None
+    except requests.RequestException as exc:
+        response_status = None
+        response_preview = None
 
-    if exc.response is not None:
-        response_status = exc.response.status_code
+        if exc.response is not None:
+            response_status = exc.response.status_code
 
-        try:
-            response_preview = exc.response.text[:300]
-        except Exception:
-            response_preview = None
+            try:
+                response_preview = exc.response.text[:300]
+            except Exception:
+                response_preview = None
 
-    error_message = f"HTTP 請求失敗：{str(exc)}"
+        error_message = f"HTTP 請求失敗：{str(exc)}"
 
-    if response_status is not None:
-        error_message += f"；狀態碼：{response_status}"
+        if response_status is not None:
+            error_message += f"；狀態碼：{response_status}"
 
-    if response_preview:
-        error_message += f"；回傳內容：{response_preview}"
+        if response_preview:
+            error_message += f"；回傳內容：{response_preview}"
 
-    return {
-        "date": None,
-        "rawDate": None,
-        "error": error_message
-    }
+        return {
+            "date": None,
+            "rawDate": None,
+            "error": error_message
+        }
 
     except ET.ParseError as exc:
         return {
