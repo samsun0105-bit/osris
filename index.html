@@ -1761,52 +1761,43 @@ const handleAllSync = async () => {
          * 先計算更新結果，避免在 setLaws updater
          * 中直接修改外部計數變數。
          */
-        let updatedCount = 0;
-        let unchangedCount = 0;
-        let unmatchedCount = 0;
+let updatedCount = 0;
+let unchangedCount = 0;
+let unmatchedCount = 0;
 
-        const normalizedSyncMap = new Map(
-            validSyncData.map(item => [
-                String(item.Pcode)
-                    .trim()
-                    .toUpperCase(),
-                item
-            ])
-        );
+const nextLaws = laws.map(law => {
+    const lawPcode = String(
+        law.pcode || ''
+    )
+        .trim()
+        .toUpperCase();
 
-        setLaws(prevLaws => {
-            return prevLaws.map(law => {
-                const lawPcode = String(
-                    law.pcode || ''
-                )
-                    .trim()
-                    .toUpperCase();
+    const match = normalizedSyncMap.get(
+        lawPcode
+    );
 
-                const match = normalizedSyncMap.get(
-                    lawPcode
-                );
+    if (!match) {
+        unmatchedCount += 1;
+        return law;
+    }
 
-                if (!match) {
-                    unmatchedCount += 1;
-                    return law;
-                }
+    if (
+        String(law.remoteDate || '') ===
+        String(match.LastUpdate)
+    ) {
+        unchangedCount += 1;
+        return law;
+    }
 
-                if (
-                    String(law.remoteDate || '') ===
-                    String(match.LastUpdate)
-                ) {
-                    unchangedCount += 1;
-                    return law;
-                }
+    updatedCount += 1;
 
-                updatedCount += 1;
+    return {
+        ...law,
+        remoteDate: match.LastUpdate
+    };
+});
 
-                return {
-                    ...law,
-                    remoteDate: match.LastUpdate
-                };
-            });
-        });
+setLaws(nextLaws);
 
         /*
          * 若目前停留在鑑別工作台，
