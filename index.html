@@ -1189,7 +1189,7 @@ const savedEditorEnabled = await dbManager.get('editor_enabled');
                                 { id: 15, pcode: 'N0060025', name: '工業用機器人危害預防標準', type: '法規命令', remoteDate: '2018-02-14', localCheckDate: UNIFIED_INITIAL_DATE },
                                 { id: 16, pcode: 'N0060011', name: '鍋爐及壓力容器安全規則', type: '法規命令', remoteDate: '2014-07-01', localCheckDate: UNIFIED_INITIAL_DATE },
                                 { id: 17, pcode: 'J0160009', name: '游離輻射防護法', type: '法律', remoteDate: '2002-01-30', localCheckDate: UNIFIED_INITIAL_DATE },
-                                { id: 18, pcode: 'J0160022', name: '游離輻射防護施行細則', type: '法規命令', remoteDate: '2008-02-22', localCheckDate: UNIFIED_INITIAL_DATE },
+                                { id: 18, pcode: 'J0160022', name: '游離輻射防護法施行細則', type: '法規命令', remoteDate: '2008-02-22', localCheckDate: UNIFIED_INITIAL_DATE },
                                 { id: 19, pcode: 'J0160004', name: '游離輻射防護安全標準', type: '法規命令', remoteDate: '2005-12-30', localCheckDate: UNIFIED_INITIAL_DATE },
                                 { id: 20, pcode: 'J0160025', name: '放射性物質與可發生游離輻射設備及其輻射作業管理辦法', type: '法規命令', remoteDate: '2018-12-22', localCheckDate: UNIFIED_INITIAL_DATE },
                                 { id: 21, pcode: 'J0160042', name: '放射性物質或可發生游離輻射設備操作人員管理辦法', type: '法規命令', remoteDate: '2009-04-17', localCheckDate: UNIFIED_INITIAL_DATE },
@@ -1687,7 +1687,6 @@ const handleAllSync = async () => {
 
     const controller = new AbortController();
 
-    // 維持你原本決定的 60 秒逾時
     const timeoutId = setTimeout(() => {
         controller.abort();
     }, 60000);
@@ -1731,12 +1730,6 @@ const handleAllSync = async () => {
             ? result.data
             : [];
 
-        /*
-         * 只接受：
-         * 1. 有 Pcode
-         * 2. 有 LastUpdate
-         * 3. 日期格式為 YYYY-MM-DD
-         */
         const validSyncData = syncData.filter(item => {
             return (
                 item &&
@@ -1757,53 +1750,53 @@ const handleAllSync = async () => {
             throw new Error(firstError);
         }
 
-        /*
-         * 先計算更新結果，避免在 setLaws updater
-         * 中直接修改外部計數變數。
-         */
-let updatedCount = 0;
-let unchangedCount = 0;
-let unmatchedCount = 0;
+        let updatedCount = 0;
+        let unchangedCount = 0;
+        let unmatchedCount = 0;
 
-const nextLaws = laws.map(law => {
-    const lawPcode = String(
-        law.pcode || ''
-    )
-        .trim()
-        .toUpperCase();
+        const normalizedSyncMap = new Map(
+            validSyncData.map(item => [
+                String(item.Pcode || '')
+                    .trim()
+                    .toUpperCase(),
+                item
+            ])
+        );
 
-    const match = normalizedSyncMap.get(
-        lawPcode
-    );
+        const nextLaws = laws.map(law => {
+            const lawPcode = String(
+                law.pcode || ''
+            )
+                .trim()
+                .toUpperCase();
 
-    if (!match) {
-        unmatchedCount += 1;
-        return law;
-    }
+            const match = normalizedSyncMap.get(
+                lawPcode
+            );
 
-    if (
-        String(law.remoteDate || '') ===
-        String(match.LastUpdate)
-    ) {
-        unchangedCount += 1;
-        return law;
-    }
+            if (!match) {
+                unmatchedCount += 1;
+                return law;
+            }
 
-    updatedCount += 1;
+            if (
+                String(law.remoteDate || '') ===
+                String(match.LastUpdate)
+            ) {
+                unchangedCount += 1;
+                return law;
+            }
 
-    return {
-        ...law,
-        remoteDate: match.LastUpdate
-    };
-});
+            updatedCount += 1;
 
-setLaws(nextLaws);
+            return {
+                ...law,
+                remoteDate: match.LastUpdate
+            };
+        });
 
-        /*
-         * 若目前停留在鑑別工作台，
-         * 同步更新 selectedLaw，
-         * 避免工作台仍顯示同步前的舊日期。
-         */
+        setLaws(nextLaws);
+
         setSelectedLaw(prevSelectedLaw => {
             if (!prevSelectedLaw) {
                 return prevSelectedLaw;
