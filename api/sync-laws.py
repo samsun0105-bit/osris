@@ -177,15 +177,14 @@ def get_law_date(pcode):
     session = create_session()
 
     try:
-        response = session.get(
-            url,
-            params={
-                "PCode": pcode,
-                "_": int(time.time() * 1000)
-            },
-            headers=HEADERS,
-            timeout=(8, 20)
-        )
+response = session.get(
+    url,
+    params={
+        "PCode": pcode
+    },
+    headers=HEADERS,
+    timeout=(8, 20)
+)
 
         response.raise_for_status()
 
@@ -254,12 +253,31 @@ def get_law_date(pcode):
             "error": "連線逾時"
         }
 
-    except requests.RequestException as exc:
-        return {
-            "date": None,
-            "rawDate": None,
-            "error": f"HTTP 請求失敗：{str(exc)}"
-        }
+except requests.RequestException as exc:
+    response_status = None
+    response_preview = None
+
+    if exc.response is not None:
+        response_status = exc.response.status_code
+
+        try:
+            response_preview = exc.response.text[:300]
+        except Exception:
+            response_preview = None
+
+    error_message = f"HTTP 請求失敗：{str(exc)}"
+
+    if response_status is not None:
+        error_message += f"；狀態碼：{response_status}"
+
+    if response_preview:
+        error_message += f"；回傳內容：{response_preview}"
+
+    return {
+        "date": None,
+        "rawDate": None,
+        "error": error_message
+    }
 
     except ET.ParseError as exc:
         return {
