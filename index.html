@@ -1085,6 +1085,9 @@ header .mobile-hide.sm\:block {
 const UNIFIED_INITIAL_DATE = '2026-06-30';
 const fileInputRef = useRef(null);
 
+// 記錄進入鑑別工作台前，法規監控清單的捲動位置
+const monitorScrollPositionRef = useRef(0);
+
 const DEFAULT_ADMIN_PASSWORD = "SamCore@1068";
 const DEFAULT_EDITOR_PASSWORD = "TeamUser001";
 const MASTER_RECOVERY_CODE = "SAM-SUN-CORE-RECOVERY";
@@ -2862,7 +2865,14 @@ const startSync = (law) => {
         return;
     }
 
-    setSyncText(`正在連線資料庫讀取《${law.name}》最新條文...`);
+    // 記住目前在法規監控清單中的捲動位置
+    monitorScrollPositionRef.current =
+        window.scrollY ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop ||
+        0;
+
+    setSyncText(`正在連線資料庫讀取《${law.name}》最新條文.`);
     setIsSyncing(true);
 
     setTimeout(() => {
@@ -2870,6 +2880,21 @@ const startSync = (law) => {
         setActiveTab('compare');
         setIsSyncing(false);
     }, 1500);
+};
+
+const handleBackToMonitor = () => {
+    setActiveTab('monitor');
+
+    // 等待監控清單重新渲染後，恢復原本捲動位置
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            window.scrollTo({
+                top: monitorScrollPositionRef.current,
+                left: 0,
+                behavior: 'auto'
+            });
+        });
+    });
 };
 
             const currentLawData = useMemo(() => {
@@ -3510,7 +3535,10 @@ onClick={() => {
                                 </div>
                             ) : (
                                 <div className="fade-in space-y-4 sm:space-y-8">
-                                    <button onClick={() => setActiveTab('monitor')} className="back-nav-btn flex items-center gap-3 text-base font-black text-slate-500 hover:text-blue-600 transition-all group">
+                                    <button
+    onClick={handleBackToMonitor}
+    className="back-nav-btn flex items-center gap-3 text-base font-black text-slate-500 hover:text-blue-600 transition-all group"
+>
                                         <i className="fas fa-chevron-left transition-transform group-hover:-translate-x-1"></i> 返回監控清單
                                     </button>
                                     
