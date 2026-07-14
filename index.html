@@ -2877,6 +2877,26 @@ const startSync = (law) => {
                 return lawDetails[selectedLaw.id] || { rows: [] };
             }, [selectedLaw, lawDetails]);
 
+// 進入鑑別工作台時，統一將頁面捲動位置重設至最頂部
+useEffect(() => {
+    if (activeTab !== 'compare' || !selectedLaw) return;
+
+    // 等待 React 完成鑑別工作台畫面渲染後再回到頂部
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            window.scrollTo({
+                top: 0,
+                left: 0,
+                behavior: 'auto'
+            });
+
+            // 相容部分手機瀏覽器及舊版瀏覽器
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        });
+    });
+}, [activeTab, selectedLaw?.id]);            
+
             const todayDateString = getTodayDateString();
 
 const selectedLawCheckedToday =
