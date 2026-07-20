@@ -2963,22 +2963,6 @@ const saveMonitorEdits = async () => {
         return;
     }
 
-/*
- * 監控清單若有尚未儲存的法規刪除，
- * 必須先完成監控清單儲存，
- * 避免工作台提前保存已刪除的 lawDetails。
- */
-if (
-    monitorCascadeDetailsDirtyRef.current ||
-    pendingDeletedLawIdsRef.current.size > 0
-) {
-    showSystemToast(
-        '監控清單有尚未儲存的法規刪除，請先返回監控清單完成儲存。',
-        'error'
-    );
-    return;
-}
-
     try {
         const deletedLawIds =
             Array.from(
@@ -3079,15 +3063,31 @@ const saveWorkbenchEdits = async () => {
         return;
     }
 
-    if (isPreviewDataMode) {
-        showSystemToast(
-            '預覽資料模式不能儲存正式資料。',
-            'error'
-        );
-        return;
-    }
+if (isPreviewDataMode) {
+    showSystemToast(
+        '預覽資料模式不能儲存正式資料。',
+        'error'
+    );
+    return;
+}
 
-    try {
+/*
+ * 監控清單若有尚未儲存的法規刪除，
+ * 必須先完成監控清單儲存，
+ * 避免工作台提前保存已刪除的 lawDetails。
+ */
+if (
+    monitorCascadeDetailsDirtyRef.current ||
+    pendingDeletedLawIdsRef.current.size > 0
+) {
+    showSystemToast(
+        '監控清單有尚未儲存的法規刪除，請先返回監控清單完成儲存。',
+        'error'
+    );
+    return;
+}
+
+try {
         await dbManager.set(
             'details',
             lawDetails
