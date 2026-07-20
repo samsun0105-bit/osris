@@ -1244,16 +1244,61 @@ header .mobile-hide.sm\:block {
                     request.onerror = () => reject(request.error);
                 });
             },
-            set: async (key, value) => {
-                const db = await dbManager.init();
-                return new Promise((resolve, reject) => {
-                    const transaction = db.transaction(STORE_NAME, 'readwrite');
-                    const store = transaction.objectStore(STORE_NAME);
-                    const request = store.put(value, key);
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
-            }
+set: async (key, value) => {
+    const db = await dbManager.init();
+
+    return new Promise((resolve, reject) => {
+        const transaction =
+            db.transaction(STORE_NAME, 'readwrite');
+
+        const store =
+            transaction.objectStore(STORE_NAME);
+
+        const request =
+            store.put(value, key);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () =>
+            reject(request.error);
+    });
+},
+
+/*
+ * 在同一個 IndexedDB transaction 中，
+ * 一次寫入多個 key。
+ *
+ * 不變更資料庫版本、store 名稱或後端設定。
+ */
+setMany: async (entries) => {
+    const db = await dbManager.init();
+
+    return new Promise((resolve, reject) => {
+        const transaction =
+            db.transaction(STORE_NAME, 'readwrite');
+
+        const store =
+            transaction.objectStore(STORE_NAME);
+
+        entries.forEach(([key, value]) => {
+            store.put(value, key);
+        });
+
+        transaction.oncomplete = () =>
+            resolve();
+
+        transaction.onerror = () =>
+            reject(
+                transaction.error ||
+                new Error('IndexedDB 寫入失敗')
+            );
+
+        transaction.onabort = () =>
+            reject(
+                transaction.error ||
+                new Error('IndexedDB 寫入已中止')
+            );
+    });
+}
         };
 
         const App = () => {
@@ -1302,6 +1347,24 @@ const monitorManualDirtyRef =
 const workbenchManualDirtyRef =
     useRef(false);
 
+/*
+ * 管理者刪除法規時，
+ * lawDetails 也會跟著變動。
+ *
+ * 但仍等監控清單按下綠色儲存後，
+ * 才正式寫入 IndexedDB。
+ */
+const monitorCascadeDetailsDirtyRef =
+    useRef(false);
+
+/*
+ * 記錄尚未正式儲存的已刪除法規 ID。
+ * 儲存監控清單時，只刪除這些法規的正式 details，
+ * 不會誤存其他尚未儲存的工作台修改。
+ */
+const pendingDeletedLawIdsRef =
+    useRef(new Set());    
+
 /* 右下角訊息 */
 const [systemToast, setSystemToast] =
     useState({
@@ -1335,6 +1398,16 @@ const [isPreviewDataMode, setIsPreviewDataMode] = useState(false);
 const [adminPassword, setAdminPassword] = useState(DEFAULT_ADMIN_PASSWORD);
 const [editorPassword, setEditorPassword] = useState(DEFAULT_EDITOR_PASSWORD);
 const [editorEnabled, setEditorEnabled] = useState(true);
+
+/*
+ * 權限設定視窗中的暫存勾選狀態。
+ * 只有按下「儲存設定」才套用到 editorEnabled。
+ */
+const [
+    draftEditorEnabled,
+    setDraftEditorEnabled
+] = useState(true);
+
 const [laws, setLaws] = useState([]);
 const [lawDetails, setLawDetails] = useState({});
 
@@ -1349,7 +1422,15 @@ const canDeleteData = () => isAdmin;
 const canChangePassword = () => isAdmin;
 
 /* 預覽者、使用者、管理者都可使用 */
-const canUseSmartSync = () => true;
+/*
+ * 智能同步會更新正式法規公布日期，
+ * 僅開放使用者與管理者。
+ *
+ * 預覽者以展示、查看及載入 JSON 預覽為主，
+ * 不開放會改變資料內容的同步功能。
+ */
+const canUseSmartSync = () =>
+    isAdmin || isEditor;
 const canExportReport = () => true;
 const canExportBackupData = () => isAdmin || isEditor;
 const canLoadPreviewData = () => true;
@@ -2118,12 +2199,15 @@ useEffect(() => {
             );
         }
 
-        if (!workbenchManualDirtyRef.current) {
-            dbManager.set(
-                'details',
-                lawDetails
-            );
-        }
+if (
+    !workbenchManualDirtyRef.current &&
+    !monitorCascadeDetailsDirtyRef.current
+) {
+    dbManager.set(
+        'details',
+        lawDetails
+    );
+}
 
         dbManager.set(
             'admin_pwd',
@@ -2246,6 +2330,171 @@ const isSameDateString = (value, targetDate) => {
     return String(value || '').trim() === targetDate;
 };
 
+/*
+ * 只保存系統操作產生的日期欄位：
+ *
+ * remoteDate：
+ * 智能同步取得的最新公布日期。
+ *
+ * localCheckDate：
+ * 完成鑑別或管理者同步的日期。
+ *
+ * 不保存名稱、PCode、類型、排序等人工編輯欄位。
+ */
+const persistLawSystemUpdates =
+    async (updates) => {
+
+    if (
+        previewDataModeRef.current ||
+        !Array.isArray(updates) ||
+        updates.length === 0
+    ) {
+        return;
+    }
+
+    const updateMap = new Map();
+
+    updates.forEach(item => {
+        const changes = {};
+
+        if (
+            item.remoteDate !== undefined
+        ) {
+            changes.remoteDate =
+                item.remoteDate;
+        }
+
+        if (
+            item.localCheckDate !== undefined
+        ) {
+            changes.localCheckDate =
+                item.localCheckDate;
+        }
+
+        if (
+            Object.keys(changes).length > 0
+        ) {
+            updateMap.set(
+                String(item.id),
+                changes
+            );
+        }
+    });
+
+    if (updateMap.size === 0) {
+        return;
+    }
+
+    const savedLaws =
+        await dbManager.get('laws');
+
+    /*
+     * 正常情況使用 IndexedDB 中的正式資料，
+     * 避免把尚未按儲存的人工編輯一起寫入。
+     */
+    const sourceLaws =
+        Array.isArray(savedLaws)
+            ? savedLaws
+            : laws;
+
+    const nextSavedLaws =
+        sourceLaws.map(law => {
+            const changes =
+                updateMap.get(
+                    String(law.id)
+                );
+
+            return changes
+                ? {
+                    ...law,
+                    ...changes
+                }
+                : law;
+        });
+
+    await dbManager.set(
+        'laws',
+        nextSavedLaws
+    );
+};
+
+const hasUnsavedMonitorChanges = () =>
+    monitorManualDirtyRef.current ||
+    monitorCascadeDetailsDirtyRef.current;
+
+const hasUnsavedWorkbenchChanges = () =>
+    workbenchManualDirtyRef.current;
+
+const hasAnyUnsavedChanges = () =>
+    hasUnsavedMonitorChanges() ||
+    hasUnsavedWorkbenchChanges();
+
+/*
+ * scope：
+ * all       = 所有未儲存內容
+ * monitor   = 監控清單
+ * workbench = 鑑別工作台
+ */
+const confirmUnsavedLeave = (
+    scope = 'all',
+    actionLabel = '離開'
+) => {
+    let hasUnsaved = false;
+
+    if (scope === 'monitor') {
+        hasUnsaved =
+            hasUnsavedMonitorChanges();
+
+    } else if (scope === 'workbench') {
+        hasUnsaved =
+            hasUnsavedWorkbenchChanges();
+
+    } else {
+        hasUnsaved =
+            hasAnyUnsavedChanges();
+    }
+
+    if (!hasUnsaved) {
+        return true;
+    }
+
+    return window.confirm(
+        '目前有尚未儲存的修改。\n\n' +
+        `${actionLabel}不會自動儲存這些內容，` +
+        '重新整理或關閉頁面後可能遺失。\n\n' +
+        '確定要繼續嗎？'
+    );
+};
+
+/*
+ * 瀏覽器重新整理、關閉分頁或離開網站時提醒。
+ *
+ * 瀏覽器會使用自己的標準提示文字，
+ * 不一定顯示自訂訊息。
+ */
+useEffect(() => {
+    const handleBeforeUnload = (event) => {
+        if (!hasAnyUnsavedChanges()) {
+            return;
+        }
+
+        event.preventDefault();
+        event.returnValue = '';
+    };
+
+    window.addEventListener(
+        'beforeunload',
+        handleBeforeUnload
+    );
+
+    return () => {
+        window.removeEventListener(
+            'beforeunload',
+            handleBeforeUnload
+        );
+    };
+}, []);
+
             const checkLawDiff = (remoteDate, localDate) => {
                 const rDate = new Date(remoteDate);
                 const lDate = localDate ? new Date(localDate) : new Date(0);
@@ -2341,80 +2590,210 @@ const applyImportedRegulationData = (importedData) => {
     };
 };
 
-const importDatabase = (event, mode = 'import') => {
-    const file = event.target.files[0];
-    if (!file) return;
+const importDatabase = (
+    event,
+    mode = 'import'
+) => {
+    const file =
+        event.target.files[0];
 
-    if (mode === 'import' && !canImportData()) {
-        alert('請先登入使用者或管理者權限後再載入資料。');
+    if (!file) {
+        return;
+    }
+
+    if (
+        mode === 'import' &&
+        !canImportData()
+    ) {
+        alert(
+            '請先登入使用者或管理者權限後再載入資料。'
+        );
+
         setShowLoginModal(true);
         event.target.value = '';
         return;
     }
 
-    if (mode === 'preview' && !canLoadPreviewData()) {
-        alert('目前無法載入預覽資料。');
+    if (
+        mode === 'preview' &&
+        !canLoadPreviewData()
+    ) {
+        alert(
+            '目前無法載入預覽資料。'
+        );
+
         event.target.value = '';
         return;
     }
 
-    const reader = new FileReader();
+    const reader =
+        new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
-            const importedData = JSON.parse(e.target.result);
-            const parsedData = applyImportedRegulationData(importedData);
+            const importedData =
+                JSON.parse(
+                    e.target.result
+                );
 
+            const parsedData =
+                applyImportedRegulationData(
+                    importedData
+                );
+
+            /*
+             * 預覽載入：
+             * 只更新目前畫面，
+             * 完全不寫入 IndexedDB。
+             */
             if (mode === 'preview') {
-                /*
-                 * 預覽載入：
-                 * 只更新目前頁面狀態，不覆蓋 IndexedDB。
-                 * 密碼與權限設定不處理。
-                 */
-previewDataModeRef.current = true;
-setIsPreviewDataMode(true);
+                if (
+                    hasAnyUnsavedChanges()
+                ) {
+                    const confirmed =
+                        confirm(
+                            '目前有尚未儲存的修改。\n\n' +
+                            '載入預覽資料將覆蓋目前畫面內容，' +
+                            '這些未儲存修改將被放棄。\n\n' +
+                            '確定要繼續嗎？'
+                        );
 
-setIsMonitorEditMode(false);
-setIsWorkbenchEditMode(false);
+                    if (!confirmed) {
+                        return;
+                    }
+                }
 
-monitorManualDirtyRef.current = false;
-workbenchManualDirtyRef.current = false;
+                previewDataModeRef.current =
+                    true;
 
-setLaws(parsedData.laws);
-setLawDetails(parsedData.lawDetails);
+                setIsPreviewDataMode(true);
 
-                alert('預覽資料載入成功！');
+                setIsMonitorEditMode(false);
+                setIsWorkbenchEditMode(false);
+
+                monitorManualDirtyRef.current =
+                    false;
+
+                workbenchManualDirtyRef.current =
+                    false;
+
+                monitorCascadeDetailsDirtyRef.current =
+                    false;
+
+                pendingDeletedLawIdsRef.current.clear();
+
+                setLaws(
+                    parsedData.laws
+                );
+
+                setLawDetails(
+                    parsedData.lawDetails
+                );
+
+                alert(
+                    '預覽資料載入成功！'
+                );
+
                 return;
             }
 
-            const importLabel = isAdmin ? '匯入資料' : '載入資料';
+            const importLabel =
+                isAdmin
+                    ? '匯入資料'
+                    : '載入資料';
 
-if (confirm(`${importLabel}將覆蓋目前所有紀錄，確定要繼續嗎？`)) {
-    /*
-     * 正式載入 / 匯入：
-     * 使用同一份 JSON 正式覆蓋 laws / lawDetails。
-     * 不匯入、不覆蓋 adminPassword / editorPassword / editorEnabled。
-     */
-previewDataModeRef.current = false;
-setIsPreviewDataMode(false);
+            const unsavedWarning =
+                hasAnyUnsavedChanges()
+                    ? '\n\n目前有尚未儲存的修改，' +
+                      '繼續後將放棄這些修改。'
+                    : '';
 
-setIsMonitorEditMode(false);
-setIsWorkbenchEditMode(false);
+            const confirmed =
+                confirm(
+                    `${importLabel}將覆蓋目前所有紀錄，` +
+                    `確定要繼續嗎？` +
+                    unsavedWarning
+                );
 
-monitorManualDirtyRef.current = false;
-workbenchManualDirtyRef.current = false;
+            if (!confirmed) {
+                return;
+            }
 
-setLaws(parsedData.laws);
-setLawDetails(parsedData.lawDetails);
+            /*
+             * 先正式寫入 IndexedDB。
+             * laws 與 details 使用同一 transaction。
+             */
+            await dbManager.setMany([
+                [
+                    'laws',
+                    parsedData.laws
+                ],
+                [
+                    'details',
+                    parsedData.lawDetails
+                ]
+            ]);
 
-    alert(`${importLabel}成功！`);
-}
+            /*
+             * IndexedDB 寫入成功後，
+             * 才更新畫面狀態及顯示成功訊息。
+             */
+            previewDataModeRef.current =
+                false;
 
-        } catch (err) {
-            alert('檔案解析失敗：' + err.message);
+            setIsPreviewDataMode(false);
+
+            setIsMonitorEditMode(false);
+            setIsWorkbenchEditMode(false);
+
+            monitorManualDirtyRef.current =
+                false;
+
+            workbenchManualDirtyRef.current =
+                false;
+
+            monitorCascadeDetailsDirtyRef.current =
+                false;
+
+            pendingDeletedLawIdsRef.current.clear();
+
+            setLaws(
+                parsedData.laws
+            );
+
+            setLawDetails(
+                parsedData.lawDetails
+            );
+
+            alert(
+                `${importLabel}成功！`
+            );
+
+        } catch (error) {
+            console.error(
+                '資料載入失敗：',
+                error
+            );
+
+            alert(
+                '資料載入失敗：' +
+                (
+                    error.message ||
+                    '未知錯誤'
+                )
+            );
+
         } finally {
             event.target.value = '';
         }
+    };
+
+    reader.onerror = () => {
+        alert(
+            '檔案讀取失敗，請重新選擇資料檔案。'
+        );
+
+        event.target.value = '';
     };
 
     reader.readAsText(file);
@@ -2528,6 +2907,14 @@ const handleChangePassword = () => {
         setEditorPassword(nextEditorPassword);
     }
 
+    /*
+ * 按下儲存設定後，
+ * 才正式套用使用者權限勾選狀態。
+ */
+setEditorEnabled(
+    draftEditorEnabled
+);
+
     setOldPasswordInput('');
     setNewAdminPasswordInput('');
     setNewEditorPasswordInput('');
@@ -2576,14 +2963,71 @@ const saveMonitorEdits = async () => {
         return;
     }
 
+/*
+ * 監控清單若有尚未儲存的法規刪除，
+ * 必須先完成監控清單儲存，
+ * 避免工作台提前保存已刪除的 lawDetails。
+ */
+if (
+    monitorCascadeDetailsDirtyRef.current ||
+    pendingDeletedLawIdsRef.current.size > 0
+) {
+    showSystemToast(
+        '監控清單有尚未儲存的法規刪除，請先返回監控清單完成儲存。',
+        'error'
+    );
+    return;
+}
+
     try {
-        await dbManager.set(
-            'laws',
-            laws
-        );
+        const deletedLawIds =
+            Array.from(
+                pendingDeletedLawIdsRef.current
+            );
+
+        if (deletedLawIds.length > 0) {
+            /*
+             * 從正式 IndexedDB 內容開始處理，
+             * 只移除本次刪除法規的 details。
+             *
+             * 不直接儲存目前整份 lawDetails，
+             * 避免誤存其他尚未按儲存的工作台修改。
+             */
+            const savedDetails =
+                await dbManager.get('details');
+
+            const nextSavedDetails =
+                savedDetails &&
+                typeof savedDetails === 'object'
+                    ? { ...savedDetails }
+                    : {};
+
+            deletedLawIds.forEach(id => {
+                delete nextSavedDetails[id];
+                delete nextSavedDetails[
+                    String(id)
+                ];
+            });
+
+            await dbManager.setMany([
+                ['laws', laws],
+                ['details', nextSavedDetails]
+            ]);
+
+        } else {
+            await dbManager.set(
+                'laws',
+                laws
+            );
+        }
 
         monitorManualDirtyRef.current =
             false;
+
+        monitorCascadeDetailsDirtyRef.current =
+            false;
+
+        pendingDeletedLawIdsRef.current.clear();
 
         showSystemToast(
             '法規監控清單已儲存'
@@ -2669,6 +3113,15 @@ const saveWorkbenchEdits = async () => {
     }
 };    
 const handleLogout = () => {
+    if (
+        !confirmUnsavedLeave(
+            'all',
+            '登出'
+        )
+    ) {
+        return;
+    }
+
     setIsAdmin(false);
     setIsEditor(false);
 
@@ -2688,7 +3141,21 @@ const addNewLaw = () => {
         return;
     }
 
-    const newId = Math.max(...laws.map(l => l.id), 0) + 1;
+    const reservedDeletedIds =
+    Array.from(
+        pendingDeletedLawIdsRef.current
+    )
+        .map(id => Number(id))
+        .filter(id => Number.isFinite(id));
+
+const newId =
+    Math.max(
+        ...laws.map(law =>
+            Number(law.id) || 0
+        ),
+        ...reservedDeletedIds,
+        0
+    ) + 1;
                 
     monitorManualDirtyRef.current =
     true;
@@ -2698,18 +3165,51 @@ const addNewLaw = () => {
 
 const removeLaw = (id) => {
     if (!canDeleteLawMonitor()) {
-        alert('只有管理者可以刪除法規監測項目。');
+        alert(
+            '只有管理者可以刪除法規監測項目。'
+        );
         return;
     }
 
-    if(confirm('確定要移除此法規監測項目嗎？相關鑑別紀錄也會消失。')) {
-                    
+    const confirmed = confirm(
+        '確定要移除此法規監測項目嗎？' +
+        '相關鑑別紀錄也會一併刪除。\n\n' +
+        '請記得按下綠色儲存按鈕，才會正式保存。'
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
     monitorManualDirtyRef.current =
-    true; 
-        
-        setLaws(prev => prev.filter(law => law.id !== id));
-                }
-            };
+        true;
+
+    monitorCascadeDetailsDirtyRef.current =
+        true;
+
+    pendingDeletedLawIdsRef.current.add(id);
+
+    setLaws(prev =>
+        prev.filter(law => law.id !== id)
+    );
+
+    setLawDetails(prev => {
+        const nextDetails = {
+            ...prev
+        };
+
+        delete nextDetails[id];
+        delete nextDetails[String(id)];
+
+        return nextDetails;
+    });
+
+    setSelectedLaw(prev =>
+        prev && prev.id === id
+            ? null
+            : prev
+    );
+};
 
 const updateLawField = (
     id,
@@ -2880,6 +3380,11 @@ const handleAllSync = async () => {
         let unchangedCount = 0;
         let unmatchedCount = 0;
 
+        /*
+ * 收集本次智能同步實際更新的正式日期欄位。
+ */
+const systemLawUpdates = [];
+
         const normalizedSyncMap = new Map(
             validSyncData.map(item => [
                 String(item.Pcode || '')
@@ -2913,13 +3418,29 @@ const handleAllSync = async () => {
                 return law;
             }
 
-            updatedCount += 1;
+updatedCount += 1;
 
-            return {
-                ...law,
-                remoteDate: match.LastUpdate
-            };
+systemLawUpdates.push({
+    id: law.id,
+    remoteDate: match.LastUpdate
+});
+
+return {
+    ...law,
+    remoteDate: match.LastUpdate
+};
         });
+
+/*
+ * 先獨立保存智能同步結果，
+ * 再更新 React 畫面。
+ *
+ * 即使監控清單有尚未儲存的人工修改，
+ * remoteDate 仍會正式保存。
+ */
+await persistLawSystemUpdates(
+    systemLawUpdates
+);
 
         setLaws(nextLaws);
 
@@ -3034,81 +3555,170 @@ const handleAllSync = async () => {
     }
 };
 
-const handleSingleSync = (lawId, options = {}) => {
-    const { returnToMonitor = false } = options;
+const handleSingleSync = (
+    lawId,
+    options = {}
+) => {
+    const {
+        returnToMonitor = false
+    } = options;
 
     if (!canConfirmIdentification()) {
-        alert('請先登入使用者或管理者權限後再完成鑑別。');
+        alert(
+            '請先登入使用者或管理者權限後再完成鑑別。'
+        );
         setShowLoginModal(true);
         return;
     }
 
+    const unsavedNotice =
+        returnToMonitor &&
+        workbenchManualDirtyRef.current
+            ? '\n\n注意：鑑別工作台目前仍有尚未儲存的修改。' +
+              '完成鑑別並返回監控清單，不會自動保存這些人工修改。'
+            : '';
+
     const confirmed = confirm(
-        '是否確認此法規已完成本次鑑別？\n\n系統將更新本地鑑別日期為今日。'
+        '是否確認此法規已完成本次鑑別？\n\n' +
+        '系統將更新本地鑑別日期為今日。' +
+        unsavedNotice
     );
 
     if (!confirmed) {
         return;
     }
 
-    setSyncText('正在更新本地鑑別日期...');
+    setSyncText(
+        '正在更新本地鑑別日期...'
+    );
+
     setIsSyncing(true);
 
-    setTimeout(() => {
-        const today = getTodayDateString();
+    setTimeout(async () => {
+        const today =
+            getTodayDateString();
 
-        setLaws(prev =>
-            prev.map(law =>
-                law.id === lawId
-                    ? { ...law, localCheckDate: today }
-                    : law
-            )
-        );
+        try {
+            /*
+             * 直接保存 localCheckDate，
+             * 不受監控清單人工 dirty 狀態影響。
+             */
+            await persistLawSystemUpdates([
+                {
+                    id: lawId,
+                    localCheckDate: today
+                }
+            ]);
 
-        setSelectedLaw(prev =>
-            prev && prev.id === lawId
-                ? { ...prev, localCheckDate: today }
-                : prev
-        );
+            setLaws(prev =>
+                prev.map(law =>
+                    law.id === lawId
+                        ? {
+                            ...law,
+                            localCheckDate: today
+                        }
+                        : law
+                )
+            );
 
-        setIsSyncing(false);
+            setSelectedLaw(prev =>
+                prev &&
+                prev.id === lawId
+                    ? {
+                        ...prev,
+                        localCheckDate: today
+                    }
+                    : prev
+            );
 
-        if (returnToMonitor) {
-            setActiveTab('monitor');
+            if (returnToMonitor) {
+                setIsWorkbenchEditMode(false);
+                setActiveTab('monitor');
+            }
+
+            alert(
+                `鑑別完成！最近鑑別/登錄日已更新為 ${today}。`
+            );
+
+        } catch (error) {
+            console.error(
+                '完成鑑別日期儲存失敗：',
+                error
+            );
+
+            alert(
+                '鑑別日期儲存失敗，' +
+                '請稍後再試。'
+            );
+
+        } finally {
+            setIsSyncing(false);
         }
-
-        alert(`鑑別完成！最近鑑別/登錄日已更新為 ${today}。`);
     }, 500);
 };
 
-const handleAdminSyncIdentification = () => {
+const handleAdminSyncIdentification =
+    async () => {
+
     if (!canSyncIdentificationAll()) {
-        alert('只有管理者可以同步所有法規的鑑別日期。');
+        alert(
+            '只有管理者可以同步所有法規的鑑別日期。'
+        );
         return;
     }
 
-    const today = getTodayDateString();
+    const today =
+        getTodayDateString();
 
-    if (!confirm(`確定要將所有法規的「最近鑑別/登錄日」同步為今天：${today} 嗎？`)) {
+    const confirmed = confirm(
+        `確定要將所有法規的「最近鑑別/登錄日」` +
+        `同步為今天：${today} 嗎？`
+    );
+
+    if (!confirmed) {
         return;
     }
 
-    setLaws(prev =>
-        prev.map(law => ({
-            ...law,
-            localCheckDate: today
-        }))
-    );
+    try {
+        await persistLawSystemUpdates(
+            laws.map(law => ({
+                id: law.id,
+                localCheckDate: today
+            }))
+        );
 
-    setSelectedLaw(prev =>
-        prev
-            ? { ...prev, localCheckDate: today }
-            : prev
-    );
+        setLaws(prev =>
+            prev.map(law => ({
+                ...law,
+                localCheckDate: today
+            }))
+        );
 
-    alert(`同步鑑別完成！所有法規的最近鑑別/登錄日已更新為 ${today}。`);
+        setSelectedLaw(prev =>
+            prev
+                ? {
+                    ...prev,
+                    localCheckDate: today
+                }
+                : prev
+        );
+
+        alert(
+            `同步鑑別完成！所有法規的最近鑑別/登錄日已更新為 ${today}。`
+        );
+
+    } catch (error) {
+        console.error(
+            '同步所有鑑別日期失敗：',
+            error
+        );
+
+        alert(
+            '同步鑑別日期儲存失敗，' +
+            '請稍後再試。'
+        );
+    }
 };
-
             const finalizeSingleSync = (lawId) => {
                 setTimeout(() => {
                     const today = getTodayDateString();
@@ -3418,6 +4028,15 @@ const startSync = (law) => {
 };
 
 const handleBackToMonitor = () => {
+    if (
+        !confirmUnsavedLeave(
+            'workbench',
+            '返回監控清單'
+        )
+    ) {
+        return;
+    }
+
     setIsWorkbenchEditMode(false);
     setActiveTab('monitor');
 
@@ -3610,7 +4229,7 @@ const selectedLawCheckedToday =
 )}
 
                 <p className="text-[10px] text-center text-slate-400 leading-relaxed">
-                    未登入狀態可使用智能同步、匯出總表、載入預覽、查看法規清單、比對詳情與列印報告；條文新增、編輯、正式載入與資料匯出需登入權限。
+                    未登入狀態可使用匯出總表、載入預覽、查看法規清單、比對詳情與列印報告；智能同步、條文新增與編輯、正式載入及資料匯出需登入權限。
                 </p>
             </div>
         </div>
@@ -3679,8 +4298,12 @@ const selectedLawCheckedToday =
                     <label className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 cursor-pointer">
                         <input
                             type="checkbox"
-                            checked={editorEnabled}
-                            onChange={(e) => setEditorEnabled(e.target.checked)}
+checked={draftEditorEnabled}
+onChange={(e) =>
+    setDraftEditorEnabled(
+        e.target.checked
+    )
+}
                             className="w-4 h-4 accent-blue-600"
                         />
                         <span className="text-sm font-bold text-slate-700">啟用使用者共用權限</span>
@@ -3698,10 +4321,20 @@ const selectedLawCheckedToday =
 
                     <div className="flex space-x-2 pt-1">
                         <button
-                            onClick={() => {
-                                setShowPermissionSettingsModal(false);
-                                setChangeError('');
-                            }}
+onClick={() => {
+    /*
+     * 放棄視窗中的暫存勾選變更。
+     */
+    setDraftEditorEnabled(
+        editorEnabled
+    );
+
+    setShowPermissionSettingsModal(false);
+    setChangeError('');
+    setOldPasswordInput('');
+    setNewAdminPasswordInput('');
+    setNewEditorPasswordInput('');
+}}
                             className="flex-1 py-1.5 bg-slate-100 text-slate-600 rounded-lg font-bold hover:bg-slate-200 transition text-xs"
                         >
                             取消
@@ -3800,13 +4433,17 @@ onClick={() => {
 
 {isAdmin && (
     <button
-        onClick={() => {
-            setShowPermissionSettingsModal(true);
-            setChangeError('');
-            setOldPasswordInput('');
-            setNewAdminPasswordInput('');
-            setNewEditorPasswordInput('');
-        }}
+onClick={() => {
+    setDraftEditorEnabled(
+        editorEnabled
+    );
+
+    setShowPermissionSettingsModal(true);
+    setChangeError('');
+    setOldPasswordInput('');
+    setNewAdminPasswordInput('');
+    setNewEditorPasswordInput('');
+}}
         className="flex items-center justify-center w-full sm:w-12 gap-1.5 sm:gap-0 py-2 sm:py-2.5 bg-slate-700 text-cyan-300 rounded-xl text-xs sm:text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900"
         title="權限與密碼設定"
     >
