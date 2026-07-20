@@ -100,6 +100,17 @@
     opacity: 1;
 }
 
+/* 手機觸控裝置避免點擊密碼欄位時瀏覽器自動放大 */
+@media (hover: none) and (pointer: coarse) {
+    .permission-password-input {
+        font-size: 16px !important;
+    }
+
+    .permission-password-input::placeholder {
+        font-size: 16px !important;
+    }
+}
+
 .mobile-compare-card-list {
     display: none;
 }
