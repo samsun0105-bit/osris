@@ -127,6 +127,37 @@
 
 .action-buttons {
     flex: 0 0 auto;
+    align-items: center;
+}
+
+/*
+ * 鑑別工作台標籤列：
+ * 手機直式時，編輯與儲存會顯示在右側。
+ */
+.workbench-kicker-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/*
+ * 手機直式專用編輯／儲存區。
+ * 桌機及手機橫式預設隱藏。
+ */
+.workbench-mobile-edit-controls {
+    display: none;
+}
+
+/*
+ * 桌機及手機橫式使用的編輯／儲存區。
+ */
+.workbench-standard-edit-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex: 0 0 auto;
 }
 
 .workbench-kicker {
@@ -171,6 +202,73 @@
     padding: 0.72rem 1.35rem;
     font-size: 0.88rem;
     border-radius: 1rem;
+}
+
+/* 編輯／檢視雙態圖示按鈕，以及正式儲存按鈕 */
+.edit-toggle-icon-btn,
+.save-data-icon-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    flex: 0 0 40px;
+
+    border-radius: 12px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 14px;
+
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease;
+
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+/* 尚未進入編輯模式 */
+.edit-toggle-icon-btn.is-view {
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    color: #2563eb;
+}
+
+.edit-toggle-icon-btn.is-view:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+/* 已進入編輯模式 */
+.edit-toggle-icon-btn.is-editing {
+    background: #fffbeb;
+    border: 1px solid #fbbf24;
+    color: #b45309;
+}
+
+.edit-toggle-icon-btn.is-editing:hover {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #92400e;
+}
+
+/* 綠色儲存按鈕 */
+.save-data-icon-btn {
+    background: #059669;
+    border: 1px solid #059669;
+    color: #ffffff;
+}
+
+.save-data-icon-btn:hover {
+    background: #047857;
+    border-color: #047857;
+}
+
+.edit-toggle-icon-btn:active,
+.save-data-icon-btn:active {
+    transform: scale(0.96);
 }
 
 .compare-summary-box {
@@ -457,8 +555,45 @@ header .mobile-hide.sm\:block {
             padding-bottom: 6px !important;
             border-radius: 11px !important;
             font-size: 11px !important;
-        }
+        }    
     }
+
+    /*
+ * 手機直式：
+ * 編輯及儲存按鈕放在「鑑別工作台」標籤同排右側。
+ */
+.workbench-kicker-row {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.workbench-mobile-edit-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+
+/*
+ * 手機直式不在下方操作列重複顯示編輯與儲存。
+ */
+.workbench-standard-edit-controls {
+    display: none !important;
+}
+
+.workbench-mobile-edit-controls .edit-toggle-icon-btn,
+.workbench-mobile-edit-controls .save-data-icon-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    flex: 0 0 38px !important;
+    padding: 0 !important;
+    border-radius: 11px;
+}
 
     .workbench-card > div:first-child {
         padding: 16px !important;
@@ -514,6 +649,14 @@ header .mobile-hide.sm\:block {
         font-size: 0.78rem;
         border-radius: 0.9rem;
     }
+
+    .action-buttons .edit-toggle-icon-btn,
+.action-buttons .save-data-icon-btn {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    padding: 0 !important;
+}
 
     .main-container {
         padding: 14px !important;
@@ -738,18 +881,50 @@ header .mobile-hide.sm\:block {
         gap: 12px !important;
     }
 
-    .action-buttons {
-        display: flex !important;
-        flex-direction: row !important;
-        width: auto !important;
-        gap: 10px !important;
-    }
+.action-buttons {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    width: auto !important;
+    gap: 10px !important;
+}
+
+/*
+ * 手機橫式比照桌機：
+ * 編輯、儲存回到右側操作按鈕列。
+ */
+.workbench-mobile-edit-controls {
+    display: none !important;
+}
+
+.workbench-standard-edit-controls {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    flex: 0 0 auto !important;
+}
 
     .action-buttons button {
         white-space: nowrap;
         padding: 11px 18px !important;
         font-size: 13px !important;
     }
+
+/*
+ * 編輯與儲存仍維持正方形圖示按鈕，
+ * 不被橫式一般文字按鈕的 padding 拉寬。
+ */
+.action-buttons .edit-toggle-icon-btn,
+.action-buttons .save-data-icon-btn {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    padding: 0 !important;
+}
+
 }        
 
 @media print {
@@ -1101,6 +1276,42 @@ const MASTER_RECOVERY_CODE = "SAM-SUN-CORE-RECOVERY";
             const [searchQuery, setSearchQuery] = useState('');
             const [filterType, setFilterType] = useState('全部');
             const [currentTime, setCurrentTime] = useState(new Date());
+
+/*
+ * 兩個區域分開管理編輯模式：
+ *
+ * 監控清單：
+ * 只有管理者可編輯。
+ *
+ * 鑑別工作台：
+ * 管理者與使用者可編輯。
+ */
+const [isMonitorEditMode, setIsMonitorEditMode] =
+    useState(false);
+
+const [isWorkbenchEditMode, setIsWorkbenchEditMode] =
+    useState(false);
+
+/*
+ * 手動編輯資料在按下儲存前，
+ * 暫時阻止原本的 useEffect 自動寫入 IndexedDB。
+ */
+const monitorManualDirtyRef =
+    useRef(false);
+
+const workbenchManualDirtyRef =
+    useRef(false);
+
+/* 右下角訊息 */
+const [systemToast, setSystemToast] =
+    useState({
+        visible: false,
+        message: '',
+        type: 'success'
+    });
+
+const systemToastTimerRef =
+    useRef(null);            
             
 // 權限狀態
 const [isAdmin, setIsAdmin] = useState(false);
@@ -1149,17 +1360,64 @@ const canPrintReport = () => true;
 /* 使用者與管理者可使用正式載入資料 */
 const canImportData = () => isAdmin || isEditor;
 
-/* 法規監測清單管理：僅管理者 */
-const canEditLawMonitor = () => isAdmin;
-const canAddLawMonitor = () => isAdmin;
-const canDeleteLawMonitor = () => isAdmin;
-const canSyncIdentificationAll = () => isAdmin;
+/*
+ * 法規監控清單：
+ * 只有管理者登入，並主動進入編輯模式後才可修改。
+ */
+const canUseMonitorEditControls = () =>
+    isAdmin &&
+    !isPreviewDataMode;
 
-/* 鑑別工作台條文：使用者可新增、編輯；刪除限管理者 */
-const canEditDetailRows = () => isAdmin || isEditor;
-const canAddDetailRows = () => isAdmin || isEditor;
-const canDeleteDetailRows = () => isAdmin;
-const canConfirmIdentification = () => isAdmin || isEditor;
+const canEditLawMonitor = () =>
+    canUseMonitorEditControls() &&
+    isMonitorEditMode;
+
+const canAddLawMonitor = () =>
+    canUseMonitorEditControls() &&
+    isMonitorEditMode;
+
+const canDeleteLawMonitor = () =>
+    canUseMonitorEditControls() &&
+    isMonitorEditMode;
+
+/*
+ * 同步鑑別日期不屬於手動編輯模式，
+ * 仍維持只有管理者可以操作。
+ */
+const canSyncIdentificationAll = () =>
+    isAdmin;
+
+/*
+ * 鑑別工作台：
+ * 管理者或使用者登入，並主動進入編輯模式後才可修改。
+ */
+const canUseWorkbenchEditControls = () =>
+    (isAdmin || isEditor) &&
+    !isPreviewDataMode;
+
+const canEditDetailRows = () =>
+    canUseWorkbenchEditControls() &&
+    isWorkbenchEditMode;
+
+const canAddDetailRows = () =>
+    canUseWorkbenchEditControls() &&
+    isWorkbenchEditMode;
+
+/*
+ * 刪除條文仍然只有管理者可以操作，
+ * 且必須先進入編輯模式。
+ */
+const canDeleteDetailRows = () =>
+    isAdmin &&
+    isWorkbenchEditMode &&
+    !isPreviewDataMode;
+
+/*
+ * 完成鑑別功能維持原規則，
+ * 不受編輯模式影響。
+ */
+const canConfirmIdentification = () =>
+    isAdmin || isEditor;
 
             // 初始化：從 IndexedDB 讀取
             useEffect(() => {
@@ -1840,16 +2098,56 @@ if (savedEditorEnabled === undefined || savedEditorEnabled === null) {
                 loadData();
             }, []);
 
-            // 持久化：當資料變動時存入 IndexedDB
+/*
+ * 持久化規則：
+ *
+ * 1. 智能同步、完成鑑別等既有系統操作，仍可自動保存。
+ * 2. 管理者手動編輯監控清單時，必須按「儲存」。
+ * 3. 管理者／使用者手動編輯鑑別工作台時，必須按「儲存」。
+ * 4. 密碼及權限設定維持原本自動保存。
+ */
 useEffect(() => {
-    if (isLoaded && !previewDataModeRef.current) {
-        dbManager.set('laws', laws);
-        dbManager.set('details', lawDetails);
-        dbManager.set('admin_pwd', adminPassword);
-        dbManager.set('editor_pwd', editorPassword);
-        dbManager.set('editor_enabled', editorEnabled);
+    if (
+        isLoaded &&
+        !previewDataModeRef.current
+    ) {
+        if (!monitorManualDirtyRef.current) {
+            dbManager.set(
+                'laws',
+                laws
+            );
+        }
+
+        if (!workbenchManualDirtyRef.current) {
+            dbManager.set(
+                'details',
+                lawDetails
+            );
+        }
+
+        dbManager.set(
+            'admin_pwd',
+            adminPassword
+        );
+
+        dbManager.set(
+            'editor_pwd',
+            editorPassword
+        );
+
+        dbManager.set(
+            'editor_enabled',
+            editorEnabled
+        );
     }
-}, [laws, lawDetails, adminPassword, editorPassword, editorEnabled, isLoaded]);
+}, [
+    laws,
+    lawDetails,
+    adminPassword,
+    editorPassword,
+    editorEnabled,
+    isLoaded
+]);
 
 useEffect(() => {
     const timer = setInterval(() => {
@@ -1874,6 +2172,40 @@ useEffect(() => {
 
     return () => {
         document.removeEventListener('keydown', handleEsc);
+    };
+}, []);
+
+const showSystemToast = (
+    message,
+    type = 'success'
+) => {
+    clearTimeout(
+        systemToastTimerRef.current
+    );
+
+    setSystemToast({
+        visible: true,
+        message,
+        type
+    });
+
+    systemToastTimerRef.current =
+        setTimeout(() => {
+            setSystemToast(prev => ({
+                ...prev,
+                visible: false
+            }));
+        }, 2800);
+};
+
+/*
+ * 元件離開時清除訊息計時器。
+ */
+useEffect(() => {
+    return () => {
+        clearTimeout(
+            systemToastTimerRef.current
+        );
     };
 }, []);
 
@@ -2039,11 +2371,17 @@ const importDatabase = (event, mode = 'import') => {
                  * 只更新目前頁面狀態，不覆蓋 IndexedDB。
                  * 密碼與權限設定不處理。
                  */
-                previewDataModeRef.current = true;
-                setIsPreviewDataMode(true);
+previewDataModeRef.current = true;
+setIsPreviewDataMode(true);
 
-                setLaws(parsedData.laws);
-                setLawDetails(parsedData.lawDetails);
+setIsMonitorEditMode(false);
+setIsWorkbenchEditMode(false);
+
+monitorManualDirtyRef.current = false;
+workbenchManualDirtyRef.current = false;
+
+setLaws(parsedData.laws);
+setLawDetails(parsedData.lawDetails);
 
                 alert('預覽資料載入成功！');
                 return;
@@ -2057,11 +2395,17 @@ if (confirm(`${importLabel}將覆蓋目前所有紀錄，確定要繼續嗎？`)
      * 使用同一份 JSON 正式覆蓋 laws / lawDetails。
      * 不匯入、不覆蓋 adminPassword / editorPassword / editorEnabled。
      */
-    previewDataModeRef.current = false;
-    setIsPreviewDataMode(false);
+previewDataModeRef.current = false;
+setIsPreviewDataMode(false);
 
-    setLaws(parsedData.laws);
-    setLawDetails(parsedData.lawDetails);
+setIsMonitorEditMode(false);
+setIsWorkbenchEditMode(false);
+
+monitorManualDirtyRef.current = false;
+workbenchManualDirtyRef.current = false;
+
+setLaws(parsedData.laws);
+setLawDetails(parsedData.lawDetails);
 
     alert(`${importLabel}成功！`);
 }
@@ -2093,6 +2437,8 @@ const handleLogin = async () => {
 
         setIsAdmin(false);
         setIsEditor(false);
+        setIsMonitorEditMode(false);
+setIsWorkbenchEditMode(false);
         setShowLoginModal(false);
         setPasswordInput('');
         setLoginError(false);
@@ -2102,9 +2448,12 @@ const handleLogin = async () => {
         return;
     }
 
-    if (inputPwd === adminPassword) {
-        setIsAdmin(true);
-        setIsEditor(false);
+if (inputPwd === adminPassword) {
+    setIsAdmin(true);
+    setIsEditor(false);
+
+    setIsMonitorEditMode(false);
+    setIsWorkbenchEditMode(false);
         setShowLoginModal(false);
         setPasswordInput('');
         setLoginError(false);
@@ -2112,9 +2461,15 @@ const handleLogin = async () => {
         return;
     }
 
-    if (editorEnabled && inputPwd === editorPassword) {
-        setIsAdmin(false);
-        setIsEditor(true);
+if (
+    editorEnabled &&
+    inputPwd === editorPassword
+) {
+    setIsAdmin(false);
+    setIsEditor(true);
+
+    setIsMonitorEditMode(false);
+    setIsWorkbenchEditMode(false);
         setShowLoginModal(false);
         setPasswordInput('');
         setLoginError(false);
@@ -2182,9 +2537,148 @@ const handleChangePassword = () => {
     alert('權限與密碼設定已更新成功。');
 };
 
+const toggleMonitorEditMode = () => {
+    if (
+        !isAdmin ||
+        isPreviewDataMode
+    ) {
+        return;
+    }
+
+    const nextMode =
+        !isMonitorEditMode;
+
+    setIsMonitorEditMode(
+        nextMode
+    );
+
+    showSystemToast(
+        nextMode
+            ? '已進入監控清單編輯模式'
+            : '已切換為監控清單檢視模式'
+    );
+};
+
+const saveMonitorEdits = async () => {
+    if (!isAdmin) {
+        showSystemToast(
+            '只有管理者可以儲存法規監控清單。',
+            'error'
+        );
+        return;
+    }
+
+    if (isPreviewDataMode) {
+        showSystemToast(
+            '預覽資料模式不能儲存正式資料。',
+            'error'
+        );
+        return;
+    }
+
+    try {
+        await dbManager.set(
+            'laws',
+            laws
+        );
+
+        monitorManualDirtyRef.current =
+            false;
+
+        showSystemToast(
+            '法規監控清單已儲存'
+        );
+
+    } catch (error) {
+        console.error(
+            '法規監控清單儲存失敗：',
+            error
+        );
+
+        showSystemToast(
+            '儲存失敗，請稍後再試。',
+            'error'
+        );
+    }
+};
+
+const toggleWorkbenchEditMode = () => {
+    if (
+        !canUseWorkbenchEditControls()
+    ) {
+        return;
+    }
+
+    const nextMode =
+        !isWorkbenchEditMode;
+
+    setIsWorkbenchEditMode(
+        nextMode
+    );
+
+    showSystemToast(
+        nextMode
+            ? '已進入鑑別工作台編輯模式'
+            : '已切換為鑑別工作台檢視模式'
+    );
+};
+
+const saveWorkbenchEdits = async () => {
+    if (
+        !isAdmin &&
+        !isEditor
+    ) {
+        showSystemToast(
+            '請先登入使用者或管理者權限。',
+            'error'
+        );
+        return;
+    }
+
+    if (isPreviewDataMode) {
+        showSystemToast(
+            '預覽資料模式不能儲存正式資料。',
+            'error'
+        );
+        return;
+    }
+
+    try {
+        await dbManager.set(
+            'details',
+            lawDetails
+        );
+
+        workbenchManualDirtyRef.current =
+            false;
+
+        showSystemToast(
+            '法規異動內容已儲存'
+        );
+
+    } catch (error) {
+        console.error(
+            '鑑別工作台儲存失敗：',
+            error
+        );
+
+        showSystemToast(
+            '儲存失敗，請稍後再試。',
+            'error'
+        );
+    }
+};    
 const handleLogout = () => {
     setIsAdmin(false);
     setIsEditor(false);
+
+    /*
+     * 登出只關閉編輯模式，
+     * 不執行額外儲存。
+     */
+    setIsMonitorEditMode(false);
+    setIsWorkbenchEditMode(false);
+
     setActiveTab('monitor');
 };
 
@@ -2195,7 +2689,11 @@ const addNewLaw = () => {
     }
 
     const newId = Math.max(...laws.map(l => l.id), 0) + 1;
-                setLaws([...laws, { id: newId, pcode: 'NEW_CODE', name: '新法規名稱', type: '法規命令', remoteDate: '2026-03-01', localCheckDate: '2026-03-01' }]);
+                
+    monitorManualDirtyRef.current =
+    true;
+
+    setLaws([...laws, { id: newId, pcode: 'NEW_CODE', name: '新法規名稱', type: '法規命令', remoteDate: '2026-03-01', localCheckDate: '2026-03-01' }]);
             };
 
 const removeLaw = (id) => {
@@ -2205,13 +2703,36 @@ const removeLaw = (id) => {
     }
 
     if(confirm('確定要移除此法規監測項目嗎？相關鑑別紀錄也會消失。')) {
-                    setLaws(prev => prev.filter(law => law.id !== id));
+                    
+    monitorManualDirtyRef.current =
+    true; 
+        
+        setLaws(prev => prev.filter(law => law.id !== id));
                 }
             };
 
-const updateLawField = (id, field, value) => {
-    if (!canEditLawMonitor()) return;
-    setLaws(prev => prev.map(law => law.id === id ? { ...law, [field]: value } : law));
+const updateLawField = (
+    id,
+    field,
+    value
+) => {
+    if (!canEditLawMonitor()) {
+        return;
+    }
+
+    monitorManualDirtyRef.current =
+        true;
+
+    setLaws(prev =>
+        prev.map(law =>
+            law.id === id
+                ? {
+                    ...law,
+                    [field]: value
+                }
+                : law
+        )
+    );
 };
 
 const moveLaw = (index, direction) => {
@@ -2219,6 +2740,9 @@ const moveLaw = (index, direction) => {
         alert('只有管理者可以調整法規排序。');
         return;
     }
+
+monitorManualDirtyRef.current =
+    true;
 
     const newLaws = [...laws];
                 const targetIndex = index + direction;
@@ -2231,6 +2755,9 @@ const moveLaw = (index, direction) => {
 
 const updateDetailField = (lawId, rowIndex, field, value) => {
     if (!canEditDetailRows()) return;
+
+workbenchManualDirtyRef.current =
+    true;    
 
     setLawDetails(prev => {
                     const current = prev[lawId] || { rows: [] };
@@ -2249,6 +2776,9 @@ const removeDetailRow = (lawId, rowIndex) => {
         return;
     }
 
+workbenchManualDirtyRef.current =
+    true;
+
     setLawDetails(prev => {
                     const current = prev[lawId] || { rows: [] };
                     const newRows = current.rows.filter((_, idx) => idx !== rowIndex);
@@ -2262,6 +2792,9 @@ const addDetailRow = (lawId) => {
         setShowLoginModal(true);
         return;
     }
+
+workbenchManualDirtyRef.current =
+    true;
 
     setLawDetails(prev => {
                     const current = prev[lawId] || { rows: [] };
@@ -2865,6 +3398,8 @@ const startSync = (law) => {
         return;
     }
 
+    setIsWorkbenchEditMode(false);
+
     // 記住目前在法規監控清單中的捲動位置
     monitorScrollPositionRef.current =
         window.scrollY ||
@@ -2883,6 +3418,7 @@ const startSync = (law) => {
 };
 
 const handleBackToMonitor = () => {
+    setIsWorkbenchEditMode(false);
     setActiveTab('monitor');
 
     // 等待監控清單重新渲染後，恢復原本捲動位置
@@ -2940,6 +3476,45 @@ const selectedLawCheckedToday =
 
             return (
                 <div className="min-h-screen flex flex-col">
+
+{systemToast.visible && (
+    <div
+        className="fixed right-4 sm:right-6 z-[120] pointer-events-none fade-in"
+        style={{
+            bottom:
+                'calc(1rem + env(safe-area-inset-bottom))'
+        }}
+    >
+        <div
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl ${
+                systemToast.type === 'success'
+                    ? 'bg-white border-emerald-200 text-slate-800'
+                    : 'bg-white border-rose-200 text-slate-800'
+            }`}
+        >
+            <span
+                className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                    systemToast.type === 'success'
+                        ? 'bg-emerald-100 text-emerald-600'
+                        : 'bg-rose-100 text-rose-600'
+                }`}
+            >
+                <i
+                    className={`fas ${
+                        systemToast.type === 'success'
+                            ? 'fa-check'
+                            : 'fa-xmark'
+                    }`}
+                ></i>
+            </span>
+
+            <span className="text-sm font-black">
+                {systemToast.message}
+            </span>
+        </div>
+    </div>
+)}
+                    
 {/* 權限登入 Modal：比照證照管理系統專業版安全驗證視窗 */}
 {showLoginModal && (
 <div
@@ -3296,15 +3871,51 @@ onClick={() => {
     ref={fileInputRef} 
 />
 
-    {isAdmin && (
-        <button 
-            onClick={handleAdminSyncIdentification}
-            title="同步鑑別"
-            className="w-10 h-10 bg-blue-600 text-white rounded-xl text-sm font-black hover:bg-blue-700 transition-all shadow-md flex items-center justify-center"
+{isAdmin && !isPreviewDataMode && (
+    <>
+        <button
+            type="button"
+            onClick={toggleMonitorEditMode}
+            aria-label={
+                isMonitorEditMode
+                    ? '切換為監控清單檢視模式'
+                    : '進入監控清單編輯模式'
+            }
+            className={`edit-toggle-icon-btn ${
+                isMonitorEditMode
+                    ? 'is-editing'
+                    : 'is-view'
+            }`}
         >
-            <i className="fas fa-arrows-rotate"></i>
+            <i
+                className={`fas ${
+                    isMonitorEditMode
+                        ? 'fa-circle-check'
+                        : 'fa-pen-to-square'
+                }`}
+            ></i>
         </button>
-    )}
+
+        <button
+            type="button"
+            onClick={saveMonitorEdits}
+            aria-label="儲存法規監控清單"
+            className="save-data-icon-btn"
+        >
+            <i className="fas fa-floppy-disk"></i>
+        </button>
+    </>
+)}
+
+{isAdmin && (
+    <button 
+        onClick={handleAdminSyncIdentification}
+        title="同步鑑別"
+        className="w-10 h-10 bg-blue-600 text-white rounded-xl text-sm font-black hover:bg-blue-700 transition-all shadow-md flex items-center justify-center"
+    >
+        <i className="fas fa-arrows-rotate"></i>
+    </button>
+)}
 
 {canExportBackupData() && (
     <button 
@@ -3546,8 +4157,47 @@ onClick={() => {
                                         <div className="p-4 sm:p-12 border-b border-slate-100 bg-slate-50/50 mobile-section-tight">
                                             <div className="workbench-header-layout flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-10">
                                                 <div className="workbench-title-zone space-y-5">
-<div className="workbench-kicker inline-flex items-center gap-2.5 bg-blue-100 text-blue-700 rounded-full font-black uppercase">
-    <i className="fas fa-microchip"></i> 鑑別工作台
+<div className="workbench-kicker-row">
+    <div className="workbench-kicker inline-flex items-center gap-2.5 bg-blue-100 text-blue-700 rounded-full font-black uppercase">
+        <i className="fas fa-microchip"></i>
+        鑑別工作台
+    </div>
+
+    {canUseWorkbenchEditControls() && (
+        <div className="workbench-mobile-edit-controls">
+            <button
+                type="button"
+                onClick={toggleWorkbenchEditMode}
+                aria-label={
+                    isWorkbenchEditMode
+                        ? '切換為鑑別工作台檢視模式'
+                        : '進入鑑別工作台編輯模式'
+                }
+                className={`edit-toggle-icon-btn ${
+                    isWorkbenchEditMode
+                        ? 'is-editing'
+                        : 'is-view'
+                }`}
+            >
+                <i
+                    className={`fas ${
+                        isWorkbenchEditMode
+                            ? 'fa-circle-check'
+                            : 'fa-pen-to-square'
+                    }`}
+                ></i>
+            </button>
+
+            <button
+                type="button"
+                onClick={saveWorkbenchEdits}
+                aria-label="儲存法規異動內容"
+                className="save-data-icon-btn"
+            >
+                <i className="fas fa-floppy-disk"></i>
+            </button>
+        </div>
+    )}
 </div>
 
 <h2 className="workbench-title font-black text-slate-800">
@@ -3573,37 +4223,90 @@ onClick={() => {
 </div>
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-4 action-buttons w-full sm:w-auto">
-{canPrintReport() && (
-    <button
-        onClick={() => window.print()}
-        className="workbench-action-btn bg-white border border-slate-200 text-slate-600 font-black transition-all hover:bg-slate-50 active:scale-95"
-    >
-        <i className="fas fa-print mr-2"></i> 列印報告
-    </button>
-)}
-{canConfirmIdentification() && selectedLaw && (
-    <button
-        onClick={() => {
-            if (selectedLawCheckedToday) return;
-            handleSingleSync(selectedLaw.id, { returnToMonitor: true });
-        }}
-        disabled={selectedLawCheckedToday}
-        className={`workbench-action-btn font-black shadow-xl transition-all active:scale-95 ${
-            selectedLawCheckedToday
-                ? 'bg-slate-300 text-slate-500 shadow-none cursor-default'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-        }`}
-        title={
-            selectedLawCheckedToday
-                ? '今日已完成鑑別'
-                : '人工確認完成本次鑑別並更新本地日期'
-        }
-    >
-        {selectedLawCheckedToday ? '今日已鑑別' : '完成鑑別'}
-    </button>
-)}
-                                                </div>
+<div className="grid grid-cols-2 sm:flex gap-2 sm:gap-4 action-buttons w-full sm:w-auto">
+
+    {/* 列印報告：桌機與手機橫式排在最前面；
+        手機直式仍位於下方操作列第一個 */}
+    {canPrintReport() && (
+        <button
+            onClick={() => window.print()}
+            className="workbench-action-btn bg-white border border-slate-200 text-slate-600 font-black transition-all hover:bg-slate-50 active:scale-95"
+        >
+            <i className="fas fa-print mr-2"></i>
+            列印報告
+        </button>
+    )}
+
+    {/* 桌機與手機橫式：編輯、儲存排在列印報告後面 */}
+    {canUseWorkbenchEditControls() && (
+        <div className="workbench-standard-edit-controls">
+            <button
+                type="button"
+                onClick={toggleWorkbenchEditMode}
+                aria-label={
+                    isWorkbenchEditMode
+                        ? '切換為鑑別工作台檢視模式'
+                        : '進入鑑別工作台編輯模式'
+                }
+                className={`edit-toggle-icon-btn ${
+                    isWorkbenchEditMode
+                        ? 'is-editing'
+                        : 'is-view'
+                }`}
+            >
+                <i
+                    className={`fas ${
+                        isWorkbenchEditMode
+                            ? 'fa-circle-check'
+                            : 'fa-pen-to-square'
+                    }`}
+                ></i>
+            </button>
+
+            <button
+                type="button"
+                onClick={saveWorkbenchEdits}
+                aria-label="儲存法規異動內容"
+                className="save-data-icon-btn"
+            >
+                <i className="fas fa-floppy-disk"></i>
+            </button>
+        </div>
+    )}
+
+    {/* 完成鑑別固定排在最後 */}
+    {canConfirmIdentification() && selectedLaw && (
+        <button
+            onClick={() => {
+                if (selectedLawCheckedToday) {
+                    return;
+                }
+
+                handleSingleSync(
+                    selectedLaw.id,
+                    {
+                        returnToMonitor: true
+                    }
+                );
+            }}
+            disabled={selectedLawCheckedToday}
+            className={`workbench-action-btn font-black shadow-xl transition-all active:scale-95 ${
+                selectedLawCheckedToday
+                    ? 'bg-slate-300 text-slate-500 shadow-none cursor-default'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+            title={
+                selectedLawCheckedToday
+                    ? '今日已完成鑑別'
+                    : '人工確認完成本次鑑別並更新本地日期'
+            }
+        >
+            {selectedLawCheckedToday
+                ? '今日已鑑別'
+                : '完成鑑別'}
+        </button>
+    )}
+</div>
                                             </div>
                                         </div>
                                         
