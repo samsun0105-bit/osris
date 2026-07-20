@@ -4720,13 +4720,13 @@ onClick={() => {
                                                         </div>
                                                     </div>
 
-                                                    <div className={`grid ${
-    isAdmin
-        ? 'grid-cols-[auto_1fr_1fr]'
+<div className={`grid ${
+    canDeleteLawMonitor()
+        ? 'grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)]'
         : canConfirmIdentification()
             ? 'grid-cols-2'
             : 'grid-cols-1'
-} sm:flex items-center gap-2 sm:gap-4 shrink-0 ml-0 lg:ml-0`}>
+} w-full lg:w-auto lg:flex items-center gap-2 sm:gap-4 shrink-0 ml-0 lg:ml-0`}>
 {canDeleteLawMonitor() && (
     <button 
         onClick={() => removeLaw(law.id)}
@@ -4740,10 +4740,10 @@ onClick={() => {
     <button 
         onClick={() => startSync(law)} className={`w-full ${
     isAdmin
-        ? 'sm:w-32'
+        ? 'lg:w-32'
         : canConfirmIdentification()
-            ? 'sm:w-36'
-            : 'sm:w-52'
+            ? 'lg:w-36'
+            : 'lg:w-52'
 } px-3 sm:px-4 py-3 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center ${isLawDiff ? 'bg-rose-600 text-white shadow-xl shadow-rose-600/30 hover:bg-rose-700 animate-pulse border-none' : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'}`}
         
     >
@@ -4754,7 +4754,7 @@ onClick={() => {
     <button
         onClick={() => handleSingleSync(law.id)}
         className={`w-full ${
-            isAdmin ? 'sm:w-32' : 'sm:w-36'
+            isAdmin ? 'lg:w-32' : 'lg:w-36'
         } px-3 sm:px-4 py-3 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm shadow-xl transition-all duration-200 transform active:scale-95 flex items-center justify-center ${
             isLawDiff
                 ? 'bg-blue-600 text-white shadow-blue-600/30 hover:bg-blue-700 hover:scale-105'
