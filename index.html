@@ -1385,7 +1385,14 @@ const [systemToast, setSystemToast] =
     });
 
 const systemToastTimerRef =
-    useRef(null);            
+    useRef(null); 
+
+/*
+ * 防止使用者連續點擊登出按鈕，
+ * 造成登出流程重複執行。
+ */
+const isLoggingOutRef =
+    useRef(false);               
             
 // 權限狀態
 const [isAdmin, setIsAdmin] = useState(false);
@@ -2839,17 +2846,32 @@ setIsWorkbenchEditMode(false);
     }
 
 if (inputPwd === adminPassword) {
+    /*
+     * 保留法規系統原本的角色設定，
+     * 不改變管理者與使用者權限規則。
+     */
     setIsAdmin(true);
     setIsEditor(false);
 
     setIsMonitorEditMode(false);
     setIsWorkbenchEditMode(false);
-        setShowLoginModal(false);
-        setPasswordInput('');
-        setLoginError(false);
-        setLoginErrorMessage('密碼錯誤，請重新輸入');
-        return;
-    }
+
+    setShowLoginModal(false);
+    setPasswordInput('');
+    setLoginError(false);
+    setLoginErrorMessage(
+        '密碼錯誤，請重新輸入'
+    );
+
+    /*
+     * 比照績效管理系統的登入通知。
+     */
+    showSystemToast(
+        '已進入管理者模式'
+    );
+
+    return;
+}
 
 if (
     editorEnabled &&
@@ -2860,12 +2882,23 @@ if (
 
     setIsMonitorEditMode(false);
     setIsWorkbenchEditMode(false);
-        setShowLoginModal(false);
-        setPasswordInput('');
-        setLoginError(false);
-        setLoginErrorMessage('密碼錯誤，請重新輸入');
-        return;
-    }
+
+    setShowLoginModal(false);
+    setPasswordInput('');
+    setLoginError(false);
+    setLoginErrorMessage(
+        '密碼錯誤，請重新輸入'
+    );
+
+    /*
+     * 比照績效管理系統的登入通知。
+     */
+    showSystemToast(
+        '已進入使用者模式'
+    );
+
+    return;
+}
 
     if (!editorEnabled && inputPwd === editorPassword) {
         setLoginErrorMessage('使用者共用權限目前已停用，請洽管理者。');
@@ -3124,26 +3157,107 @@ try {
     }
 };    
 const handleLogout = () => {
+    /*
+     * 防止快速連續點擊造成重複登出。
+     */
+    if (isLoggingOutRef.current) {
+        return;
+    }
+
+    /*
+     * 確認文字完全比照績效管理系統。
+     *
+     * 此確認視窗每次登出都會顯示，
+     * 不只在有未儲存資料時顯示。
+     */
     if (
-        !confirmUnsavedLeave(
-            'all',
-            '登出'
+        !window.confirm(
+            '確定登出系統？未儲存的變更將不會保留。'
         )
     ) {
         return;
     }
 
-    setIsAdmin(false);
-    setIsEditor(false);
+    isLoggingOutRef.current = true;
 
     /*
-     * 登出只關閉編輯模式，
-     * 不執行額外儲存。
+     * 比照績效管理系統稍微延後執行，
+     * 讓確認視窗關閉後再更新 React 畫面。
      */
-    setIsMonitorEditMode(false);
-    setIsWorkbenchEditMode(false);
+    setTimeout(() => {
+        try {
+            setIsAdmin(false);
+            setIsEditor(false);
 
-    setActiveTab('monitor');
+            /*
+             * 登出只關閉編輯權限，
+             * 不執行 IndexedDB 寫入。
+             */
+            setIsMonitorEditMode(false);
+            setIsWorkbenchEditMode(false);
+
+            /*
+             * 關閉可能仍開啟的視窗。
+             */
+            setShowLoginModal(false);
+            setShowPermissionSettingsModal(
+                false
+            );
+
+            setPasswordInput('');
+            setLoginError(false);
+            setLoginErrorMessage(
+                '密碼錯誤，請重新輸入'
+            );
+
+            /*
+             * 登出後返回法規監控清單。
+             */
+            setActiveTab('monitor');
+
+            /*
+             * 比照績效管理系統的完成通知。
+             */
+            showSystemToast(
+                '已登出系統'
+            );
+
+        } catch (error) {
+            console.error(
+                '登出失敗：',
+                error
+            );
+
+            showSystemToast(
+                '登出失敗，請重新操作。',
+                'error'
+            );
+
+        } finally {
+            isLoggingOutRef.current =
+                false;
+        }
+    }, 50);
+};
+
+/*
+ * 權限登入／登出共用按鈕。
+ *
+ * 未登入時開啟登入視窗；
+ * 已登入時執行登出確認。
+ */
+const handleAuthClick = () => {
+    if (isAdmin || isEditor) {
+        handleLogout();
+        return;
+    }
+
+    setShowLoginModal(true);
+    setLoginError(false);
+    setLoginErrorMessage(
+        '密碼錯誤，請重新輸入'
+    );
+    setPasswordInput('');
 };
 
 const addNewLaw = () => {
@@ -4109,46 +4223,48 @@ const selectedLawCheckedToday =
 
 {systemToast.visible && (
     <div
-        className="fixed right-4 sm:right-6 z-[120] pointer-events-none fade-in"
-        style={{
-            bottom:
-                'calc(1rem + env(safe-area-inset-bottom))'
-        }}
+        id="toast"
+        className="
+            no-print
+            fixed bottom-6 right-6
+            z-[300]
+            pointer-events-none
+            bg-white
+            text-slate-900
+            px-5 py-3
+            rounded-xl
+            shadow-2xl
+            font-bold
+            flex items-center
+            space-x-3
+            fade-in
+        "
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
     >
-        <div
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl ${
+        <span
+            className={
                 systemToast.type === 'success'
-                    ? 'bg-white border-emerald-200 text-slate-800'
-                    : 'bg-white border-rose-200 text-slate-800'
-            }`}
+                    ? 'text-green-500'
+                    : 'text-red-500'
+            }
         >
-            <span
-                className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                    systemToast.type === 'success'
-                        ? 'bg-emerald-100 text-emerald-600'
-                        : 'bg-rose-100 text-rose-600'
-                }`}
-            >
-                <i
-                    className={`fas ${
-                        systemToast.type === 'success'
-                            ? 'fa-check'
-                            : 'fa-xmark'
-                    }`}
-                ></i>
-            </span>
+            {systemToast.type === 'success'
+                ? '✓'
+                : '✕'}
+        </span>
 
-            <span className="text-sm font-black">
-                {systemToast.message}
-            </span>
-        </div>
+        <span id="toast-msg">
+            {systemToast.message}
+        </span>
     </div>
 )}
                     
 {/* 權限登入 Modal：比照證照管理系統專業版安全驗證視窗 */}
 {showLoginModal && (
 <div
-    className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+    className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
     onClick={() => {
         setShowLoginModal(false);
         setPasswordInput('');
@@ -4157,7 +4273,7 @@ const selectedLawCheckedToday =
     }}
 >
         <div
-            className="w-full max-w-sm mx-4 overflow-hidden rounded-2xl bg-white shadow-xl border border-slate-200 fade-in"
+            className="w-full max-w-sm mx-4 overflow-hidden rounded-2xl bg-white shadow-xl border border-slate-200 scale-in-center"
             onClick={(e) => e.stopPropagation()}
         >
             {/* 頂部簡潔標頭 */}
@@ -4420,27 +4536,50 @@ onClick={() => {
     </button>
 )}
 
-    {(isAdmin || isEditor) ? (
-        <button
-            onClick={handleLogout}
-            className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-rose-600 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-rose-700 transition-all shadow-lg border-b-4 border-rose-900"
-        >
-            <i className="fas fa-sign-out-alt"></i>
-            {isAdmin ? '管理者登出' : '使用者登出'}
-        </button>
-    ) : (
-        <button
-onClick={() => {
-    setShowLoginModal(true);
-    setLoginError(false);
-    setLoginErrorMessage('密碼錯誤，請重新輸入');
-    setPasswordInput('');
-}}
-            className="flex items-center justify-center w-full sm:w-40 gap-1.5 sm:gap-3 py-2 sm:py-2.5 bg-slate-700 text-white rounded-xl text-xs sm:text-sm font-black hover:bg-slate-600 transition-all shadow-lg border-b-4 border-slate-900"
-        >
-            <i className="fas fa-lock"></i> 權限登入
-        </button>
-    )}
+<button
+    onClick={handleAuthClick}
+    className={`
+        flex items-center justify-center
+        w-full sm:w-40
+        gap-1.5 sm:gap-3
+        py-2 sm:py-2.5
+        text-white
+        rounded-xl
+        text-xs sm:text-sm
+        font-black
+        transition-all
+        shadow-lg
+        border-b-4
+
+        ${
+            isAdmin || isEditor
+                ? (
+                    'bg-rose-600 ' +
+                    'hover:bg-rose-700 ' +
+                    'border-rose-900'
+                )
+                : (
+                    'bg-slate-700 ' +
+                    'hover:bg-slate-600 ' +
+                    'border-slate-900'
+                )
+        }
+    `}
+>
+    <i
+        className={
+            isAdmin || isEditor
+                ? 'fas fa-right-from-bracket'
+                : 'fas fa-lock'
+        }
+    ></i>
+
+    <span>
+        {isAdmin || isEditor
+            ? '登出系統'
+            : '權限登入'}
+    </span>
+</button>
 
 {isAdmin && (
     <button
